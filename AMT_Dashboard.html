@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+h<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -11,7 +11,7 @@
     --navy2: #0f2044;
     --blue: #1565c0;
     --blue-light: #1e88e5;
-    --accent: #00b4d8;
+    --accent: #00b4d8;h
     --accent2: #90e0ef;
     --active: #00b4d8;
     --upcoming: #f9a825;
@@ -468,7 +468,7 @@
 // ============================================================
 const SHEET_ID = "1v6xiy5Ghg6ZIfVGqrQiwPiPl7Ffgw8pbs4uh5t6jdb0";
 const SHEET_NAME = "Looker_Data";
-let API_KEY = "AIzaSyD9GmbfHKuvYiPcqENVZGjX-1Ezi0J55E8";
+let API_KEY = localStorage.getItem("gsheets_api_key") || "";
 
 let allJobs = [];
 let currentFilter = "all";
