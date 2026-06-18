@@ -1,668 +1,103 @@
-h<!DOCTYPE html>
-<html lang="th">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AMT Audit Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --navy: #0a1628;
-    --navy2: #0f2044;
-    --blue: #1565c0;
-    --blue-light: #1e88e5;
-    --accent: #00b4d8;h
-    --accent2: #90e0ef;
-    --active: #00b4d8;
-    --upcoming: #f9a825;
-    --late: #ef5350;
-    --done: #43a047;
-    --card-bg: rgba(255,255,255,0.04);
-    --border: rgba(255,255,255,0.08);
-    --text: #e8eaf6;
-    --text-dim: #7986cb;
+/**
+ * AMT — ซ่อมคอลัมน์ "วันสิ้นสุด" ที่ถูกข้อความสถานะ (เช่น "เสร็จแล้ว") ทับ
+ * --------------------------------------------------------------
+ * - เติมวันสิ้นสุดที่ถูกต้องจากชีท "ลงข้อมูล" โดยจับคู่ด้วย ชื่อย่อ + วันเริ่ม
+ * - แตะเฉพาะช่องวันสิ้นสุดที่ "ไม่ใช่วันที่" (ข้อความ/ว่าง) เท่านั้น
+ *   ช่องที่เป็นวันที่ถูกต้องอยู่แล้ว จะไม่ถูกแตะ → ปลอดภัย
+ * - ทุกฟังก์ชันใช้ชื่อเฉพาะ (AMT_rp...) ไม่ชนกับสคริปต์อื่น
+ *
+ * วิธีใช้: วางเป็นไฟล์ใหม่ > เลือก AMT_repairFinishDates > Run
+ */
+
+const RP_SOURCE  = "ลงข้อมูล";
+const RP_TRACKER = "Audit_Tracker";
+const RP_GAP     = 10;   // จับกลุ่มรอบในลงข้อมูล: ห่างเกินกี่วัน = คนละรอบ
+const RP_BUFFER  = 7;    // วันเริ่มของ tracker ต่างจากรอบในแผนได้ไม่เกินกี่วัน ถึงถือว่าใช่
+
+function AMT_repairFinishDates() {
+  const ss  = SpreadsheetApp.getActiveSpreadsheet();
+  const src = ss.getSheetByName(RP_SOURCE);
+  const trk = ss.getSheetByName(RP_TRACKER);
+  if (!src || !trk) { SpreadsheetApp.getUi().alert("ไม่พบชีท ลงข้อมูล หรือ Audit_Tracker"); return; }
+  const MS = 86400000;
+
+  // ---- ลงข้อมูล → clusters ต่อ job (เอาทุกกลุ่มงาน เพราะแค่ต้องการวันสิ้นสุด) ----
+  const sData = src.getDataRange().getValues();
+  const sH = AMT_rpHdr_(sData, ["ชื่อย่อ","Start date","Finish date"]);
+  if (!sH) { SpreadsheetApp.getUi().alert("หาหัวตารางในลงข้อมูลไม่เจอ"); return; }
+  const sJob=sH.col("ชื่อย่อ"), sStart=sH.col("Start date"), sFin=sH.col("Finish date");
+
+  const byJob = {};
+  for (let r = sH.row+1; r < sData.length; r++) {
+    const job = String(sData[r][sJob]||"").trim(); if (!job) continue;
+    const st = AMT_rpDate_(sData[r][sStart]); if (!st) continue;
+    const fi = AMT_rpDate_(sData[r][sFin]) || st;
+    (byJob[job] = byJob[job] || []).push({ start:st, finish:fi });
+  }
+  const clustersByJob = {};
+  Object.keys(byJob).forEach(job => {
+    const arr = byJob[job].sort((a,b)=>a.start-b.start);
+    const out = []; let cur=null, cmax=null;
+    arr.forEach(l => {
+      if (cur && (l.start - cmax)/MS > RP_GAP) { out.push(cur); cur=null; }
+      if (!cur) { cur = { start:l.start, finish:l.finish }; cmax=l.finish; }
+      if (l.start < cur.start) cur.start = l.start;
+      if (l.finish > cur.finish) cur.finish = l.finish;
+      if (l.finish > cmax) cmax = l.finish;
+    });
+    if (cur) out.push(cur);
+    clustersByJob[job] = out;
+  });
+
+  // ---- ซ่อม Audit_Tracker ----
+  const tData = trk.getDataRange().getValues();
+  const tH = AMT_rpHdr_(tData, ["ชื่อย่อ","วันเริ่ม","วันสิ้นสุด"]);
+  if (!tH) { SpreadsheetApp.getUi().alert("หาหัวตารางใน Audit_Tracker ไม่เจอ"); return; }
+  const tJob=tH.col("ชื่อย่อ"), tStart=tH.col("วันเริ่ม"), tFin=tH.col("วันสิ้นสุด");
+
+  let fixed = 0; const notFound = [];
+  for (let r = tH.row+1; r < tData.length; r++) {
+    const job = String(tData[r][tJob]||"").trim(); if (!job) continue;
+    const hRaw = tData[r][tFin];
+    if (hRaw instanceof Date && !isNaN(hRaw.getTime())) continue; // เป็นวันที่อยู่แล้ว → ข้าม
+    if (AMT_rpDate_(hRaw)) continue;                              // ข้อความที่ parse เป็นวันที่ได้ → ข้าม
+
+    const gStart = AMT_rpDate_(tData[r][tStart]);
+    if (!gStart) continue;                                        // ไม่มีวันเริ่ม → ข้ามไม่กล้าเดา
+
+    const cl = clustersByJob[job];
+    if (!cl) { notFound.push(job); continue; }
+    let best=null, bestGap=1e9;
+    cl.forEach(c => { const g = Math.abs(c.start - gStart)/MS; if (g < bestGap) { bestGap=g; best=c; } });
+
+    if (best && bestGap <= RP_BUFFER) {
+      trk.getRange(r+1, tFin+1).setValue(best.finish).setNumberFormat("dd/MM/yyyy");
+      fixed++;
+    } else {
+      notFound.push(job + " (" + Utilities.formatDate(gStart,"Asia/Bangkok","dd/MM/yyyy") + ")");
+    }
   }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    font-family: 'IBM Plex Sans Thai', 'Sarabun', sans-serif;
-    background: var(--navy);
-    color: var(--text);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* Background grid */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(0,180,216,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,180,216,0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  .container { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 0 24px 40px; }
-
-  /* Header */
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 28px 0 24px;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 32px;
-  }
-  .header-left { display: flex; align-items: center; gap: 16px; }
-  .logo {
-    width: 44px; height: 44px;
-    background: linear-gradient(135deg, var(--accent), var(--blue));
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 16px; color: white;
-  }
-  .header h1 { font-size: 22px; font-weight: 700; color: white; }
-  .header p { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
-  .last-update { font-size: 11px; color: var(--text-dim); text-align: right; }
-  .last-update span { color: var(--accent); font-weight: 500; }
-
-  /* Summary Cards */
-  .summary-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-bottom: 32px;
-  }
-
-  .card {
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 20px 24px;
-    position: relative;
-    overflow: hidden;
-    transition: transform 0.2s, border-color 0.2s;
-    cursor: default;
-  }
-  .card:hover { transform: translateY(-2px); }
-  .card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    border-radius: 16px 16px 0 0;
-  }
-  .card-active::before { background: var(--active); }
-  .card-upcoming::before { background: var(--upcoming); }
-  .card-late::before { background: var(--late); }
-  .card-done::before { background: var(--done); }
-  .card:hover { border-color: rgba(255,255,255,0.15); }
-
-  .card-label { font-size: 11px; color: var(--text-dim); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; }
-  .card-number { font-size: 42px; font-weight: 700; line-height: 1; margin-bottom: 6px; }
-  .card-active .card-number { color: var(--active); }
-  .card-upcoming .card-number { color: var(--upcoming); }
-  .card-late .card-number { color: var(--late); }
-  .card-done .card-number { color: var(--done); }
-  .card-sub { font-size: 12px; color: var(--text-dim); }
-
-  .card-icon {
-    position: absolute;
-    right: 20px; top: 50%;
-    transform: translateY(-50%);
-    font-size: 36px;
-    opacity: 0.08;
-  }
-
-  /* Section */
-  .section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-  }
-  .section-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .section-title::before {
-    content: '';
-    width: 3px; height: 16px;
-    background: var(--accent);
-    border-radius: 2px;
-  }
-  .section-count {
-    font-size: 11px;
-    color: var(--text-dim);
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    padding: 3px 10px;
-    border-radius: 20px;
-  }
-
-  /* Filter Bar */
-  .filter-bar {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-  }
-  .filter-btn {
-    padding: 6px 16px;
-    border-radius: 20px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text-dim);
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-family: inherit;
-  }
-  .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: var(--navy); font-weight: 600; }
-
-  /* Table */
-  .table-wrap {
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    overflow: hidden;
-    margin-bottom: 32px;
-  }
-
-  table { width: 100%; border-collapse: collapse; }
-  thead tr { background: rgba(255,255,255,0.05); }
-  th {
-    padding: 12px 16px;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-dim);
-    text-align: left;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    white-space: nowrap;
-    border-bottom: 1px solid var(--border);
-  }
-  td {
-    padding: 13px 16px;
-    font-size: 13px;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    vertical-align: middle;
-  }
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: rgba(255,255,255,0.03); }
-
-  .job-name { font-weight: 600; color: white; }
-  .job-client { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
-  .job-round {
-    font-size: 11px;
-    color: var(--accent2);
-    background: rgba(0,180,216,0.1);
-    border: 1px solid rgba(0,180,216,0.2);
-    padding: 2px 8px;
-    border-radius: 10px;
-    white-space: nowrap;
-    display: inline-block;
-  }
-
-  .status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-  .status-Active    { background: rgba(0,180,216,0.15);  color: var(--active);   border: 1px solid rgba(0,180,216,0.3); }
-  .status-Upcoming  { background: rgba(249,168,37,0.15); color: var(--upcoming); border: 1px solid rgba(249,168,37,0.3); }
-  .status-Late      { background: rgba(239,83,80,0.15);  color: var(--late);     border: 1px solid rgba(239,83,80,0.3); }
-  .status-Done      { background: rgba(67,160,71,0.15);  color: var(--done);     border: 1px solid rgba(67,160,71,0.3); }
-
-  .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-
-  .date-range { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
-  .date-range b { color: var(--text); }
-
-  .head-job {
-    display: flex; align-items: center; gap: 8px;
-  }
-  .avatar {
-    width: 28px; height: 28px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--blue), var(--accent));
-    display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 700; color: white;
-    flex-shrink: 0;
-  }
-
-  /* Progress bar */
-  .progress-wrap { display: flex; align-items: center; gap: 8px; }
-  .progress-bar {
-    flex: 1;
-    height: 4px;
-    background: rgba(255,255,255,0.08);
-    border-radius: 2px;
-    overflow: hidden;
-    min-width: 60px;
-  }
-  .progress-fill {
-    height: 100%;
-    border-radius: 2px;
-    background: linear-gradient(90deg, var(--accent), var(--blue-light));
-    transition: width 0.5s ease;
-  }
-  .progress-text { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
-
-  /* Upcoming alerts */
-  .alerts-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 12px;
-    margin-bottom: 32px;
-  }
-  .alert-card {
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 16px;
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-    transition: border-color 0.2s;
-  }
-  .alert-card:hover { border-color: rgba(249,168,37,0.4); }
-  .alert-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--upcoming);
-    margin-top: 5px;
-    flex-shrink: 0;
-    box-shadow: 0 0 8px var(--upcoming);
-  }
-  .alert-content { flex: 1; }
-  .alert-job { font-size: 13px; font-weight: 600; color: white; }
-  .alert-detail { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
-  .alert-days {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--upcoming);
-    background: rgba(249,168,37,0.1);
-    border: 1px solid rgba(249,168,37,0.2);
-    padding: 2px 8px;
-    border-radius: 10px;
-    white-space: nowrap;
-    align-self: center;
-  }
-
-  /* Loading */
-  .loading {
-    display: flex; align-items: center; justify-content: center;
-    padding: 60px;
-    color: var(--text-dim);
-    flex-direction: column;
-    gap: 12px;
-  }
-  .spinner {
-    width: 32px; height: 32px;
-    border: 2px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .empty { text-align: center; padding: 40px; color: var(--text-dim); font-size: 13px; }
-
-  /* Config panel */
-  .config-banner {
-    background: rgba(249,168,37,0.08);
-    border: 1px solid rgba(249,168,37,0.2);
-    border-radius: 12px;
-    padding: 16px 20px;
-    margin-bottom: 24px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 13px;
-  }
-  .config-banner input {
-    flex: 1;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 8px;
-    padding: 8px 12px;
-    color: white;
-    font-family: inherit;
-    font-size: 12px;
-  }
-  .config-banner button {
-    background: var(--accent);
-    border: none;
-    border-radius: 8px;
-    padding: 8px 16px;
-    color: var(--navy);
-    font-weight: 700;
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 12px;
-  }
-
-  @media (max-width: 768px) {
-    .summary-grid { grid-template-columns: repeat(2, 1fr); }
-    .alerts-grid { grid-template-columns: 1fr; }
-  }
-</style>
-</head>
-<body>
-
-<div class="container">
-
-  <!-- Header -->
-  <div class="header">
-    <div class="header-left">
-      <div class="logo">AMT</div>
-      <div>
-        <h1>Audit Dashboard</h1>
-        <p>ระบบติดตามงานตรวจสอบ Y2569</p>
-      </div>
-    </div>
-    <div class="last-update">
-      อัปเดตล่าสุด<br>
-      <span id="updateTime">—</span>
-    </div>
-  </div>
-
-  <!-- Config Banner -->
-  <div class="config-banner" id="configBanner">
-    <span>🔑</span>
-    <span style="color:#f9a825;font-weight:600;">ตั้งค่า API Key:</span>
-    <input type="password" id="apiKeyInput" placeholder="Google Sheets API Key ของพี่ค่ะ">
-    <button onclick="saveConfig()">บันทึก</button>
-    <span style="color:var(--text-dim);font-size:11px;">หรือ <a href="#" onclick="loadSampleData()" style="color:var(--accent);">ใช้ข้อมูลตัวอย่าง</a></span>
-  </div>
-
-  <!-- Summary Cards -->
-  <div class="summary-grid">
-    <div class="card card-active">
-      <div class="card-label">Active</div>
-      <div class="card-number" id="countActive">—</div>
-      <div class="card-sub">งานที่กำลังดำเนินการ</div>
-      <div class="card-icon">⚡</div>
-    </div>
-    <div class="card card-upcoming">
-      <div class="card-label">Upcoming</div>
-      <div class="card-number" id="countUpcoming">—</div>
-      <div class="card-sub">งานที่กำลังจะเริ่ม</div>
-      <div class="card-icon">📅</div>
-    </div>
-    <div class="card card-late">
-      <div class="card-label">Late</div>
-      <div class="card-number" id="countLate">—</div>
-      <div class="card-sub">งานที่ล่าช้า</div>
-      <div class="card-icon">⚠️</div>
-    </div>
-    <div class="card card-done">
-      <div class="card-label">Done</div>
-      <div class="card-number" id="countDone">—</div>
-      <div class="card-sub">งานที่เสร็จแล้ว</div>
-      <div class="card-icon">✅</div>
-    </div>
-  </div>
-
-  <!-- Upcoming in 14 days -->
-  <div class="section-header">
-    <div class="section-title">งานที่จะเริ่มใน 14 วันข้างหน้า</div>
-    <div class="section-count" id="alertCount">0 งาน</div>
-  </div>
-  <div class="alerts-grid" id="alertsGrid">
-    <div class="loading"><div class="spinner"></div><span>กำลังโหลด...</span></div>
-  </div>
-
-  <!-- Job Table -->
-  <div class="section-header">
-    <div class="section-title">รายการงานทั้งหมด</div>
-    <div class="section-count" id="totalCount">0 งาน</div>
-  </div>
-
-  <div class="filter-bar">
-    <button class="filter-btn active" onclick="filterJobs('all', this)">ทั้งหมด</button>
-    <button class="filter-btn" onclick="filterJobs('Active', this)">Active</button>
-    <button class="filter-btn" onclick="filterJobs('Upcoming', this)">Upcoming</button>
-    <button class="filter-btn" onclick="filterJobs('Late', this)">Late</button>
-    <button class="filter-btn" onclick="filterJobs('Done', this)">Done</button>
-  </div>
-
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Job</th>
-          <th>รอบ</th>
-          <th>Head Job</th>
-          <th>ช่วงเวลา</th>
-          <th>สถานะ</th>
-          <th>Progress</th>
-        </tr>
-      </thead>
-      <tbody id="jobTableBody">
-        <tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr>
-      </tbody>
-    </table>
-  </div>
-
-</div>
-
-<script>
-// ============================================================
-// CONFIG — แก้ตรงนี้ค่ะพี่
-// ============================================================
-const SHEET_ID = "1v6xiy5Ghg6ZIfVGqrQiwPiPl7Ffgw8pbs4uh5t6jdb0";
-const SHEET_NAME = "Looker_Data";
-let API_KEY = localStorage.getItem("gsheets_api_key") || "";
-
-let allJobs = [];
-let currentFilter = "all";
-
-// ============================================================
-// Init
-// ============================================================
-window.onload = () => {
-  document.getElementById("updateTime").textContent = new Date().toLocaleString("th-TH");
-  if (API_KEY) {
-    document.getElementById("configBanner").style.display = "none";
-    loadData();
-  } else {
-    loadSampleData();
-  }
-};
-
-function saveConfig() {
-  API_KEY = document.getElementById("apiKeyInput").value.trim();
-  if (API_KEY) {
-    localStorage.setItem("gsheets_api_key", API_KEY);
-    document.getElementById("configBanner").style.display = "none";
-    loadData();
-  }
+  let msg = "ซ่อมวันสิ้นสุดแล้ว " + fixed + " ช่อง";
+  if (notFound.length) msg += "\nหาคู่ไม่เจอ " + notFound.length + " แถว: " + [...new Set(notFound)].slice(0,15).join(", ");
+  SpreadsheetApp.getUi().alert(msg);
 }
 
-// ============================================================
-// Load from Google Sheets API
-// ============================================================
-async function loadData() {
-  try {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(SHEET_NAME)}?key=${API_KEY}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("API Error: " + res.status);
-    const json = await res.json();
-    const rows = json.values || [];
-    if (rows.length < 2) { loadSampleData(); return; }
-
-    const headers = rows[0];
-    allJobs = rows.slice(1).map(row => {
-      const obj = {};
-      headers.forEach((h, i) => obj[h] = row[i] || "");
-      return obj;
-    }).filter(j => j["ชื่อย่อ"]);
-
-    renderDashboard();
-  } catch(e) {
-    console.error(e);
-    loadSampleData();
+// ---------- helpers (ชื่อเฉพาะ ไม่ชนของเดิม) ----------
+function AMT_rpHdr_(data, must) {
+  for (let r=0; r<Math.min(data.length,12); r++) {
+    const line = data[r].map(c=>String(c||"")).join("|");
+    if (must.every(m => line.indexOf(m)!==-1)) {
+      const header = data[r].map(c=>String(c||""));
+      return { row:r, col:(kw)=>{ for(let c=0;c<header.length;c++) if(header[c].indexOf(kw)!==-1) return c; return -1; } };
+    }
   }
+  return null;
 }
-
-// ============================================================
-// Sample Data (ใช้แสดง layout)
-// ============================================================
-function loadSampleData() {
-  const today = new Date();
-  const d = (offset) => {
-    const dt = new Date(today);
-    dt.setDate(dt.getDate() + offset);
-    return dt.toLocaleDateString("th-TH", {day:"2-digit",month:"2-digit",year:"numeric"});
-  };
-
-  allJobs = [
-    { "ชื่อย่อ":"TSE", "ชื่อลูกค้า":"บริษัท ไทย โซล่าร์ เอ็นเนอร์ยี่ จำกัด", "รอบ":"Q3/2569", "Head Job":"นัท", "วันเริ่ม":d(-5), "วันสิ้นสุด":d(10), "สถานะภาพรวม":"Active", "Progress":"44%" },
-    { "ชื่อย่อ":"PAP", "ชื่อลูกค้า":"บริษัท แปซิฟิกไพพ์ จำกัด (มหาชน)", "รอบ":"รอบ 3", "Head Job":"เกล้า", "วันเริ่ม":d(3), "วันสิ้นสุด":d(14), "สถานะภาพรวม":"Upcoming", "Progress":"0%" },
-    { "ชื่อย่อ":"MGI", "ชื่อลูกค้า":"บริษัท มิสแกรนด์ อินเตอร์เนชั่นแนล จำกัด", "รอบ":"Q4/2568", "Head Job":"บ๊ะ", "วันเริ่ม":d(-30), "วันสิ้นสุด":d(-10), "สถานะภาพรวม":"Late", "Progress":"56%" },
-    { "ชื่อย่อ":"CMDF", "ชื่อลูกค้า":"กองทุนส่งเสริมการพัฒนาตลาดทุน", "รอบ":"กฎบัตร", "Head Job":"เปิ้ล", "วันเริ่ม":d(8), "วันสิ้นสุด":d(20), "สถานะภาพรวม":"Upcoming", "Progress":"0%" },
-    { "ชื่อย่อ":"SDC", "ชื่อลูกค้า":"บริษัท สติวเดนท์แคร์ จำกัด", "รอบ":"Report 1", "Head Job":"กิ๊กเอง", "วันเริ่ม":d(-60), "วันสิ้นสุด":d(-30), "สถานะภาพรวม":"Done", "Progress":"100%" },
-    { "ชื่อย่อ":"CWT", "ชื่อลูกค้า":"บริษัท ชัยวัฒนา แทนเนอรี่ กรุ๊ป จำกัด", "รอบ":"-", "Head Job":"เกล้า", "วันเริ่ม":d(12), "วันสิ้นสุด":d(25), "สถานะภาพรวม":"Upcoming", "Progress":"0%" },
-    { "ชื่อย่อ":"AI", "ชื่อลูกค้า":"บริษัท เอเชียน อินซูเลเตอร์ จำกัด(มหาชน)", "รอบ":"-", "Head Job":"โมนัน", "วันเริ่ม":d(-10), "วันสิ้นสุด":d(5), "สถานะภาพรวม":"Active", "Progress":"67%" },
-    { "ชื่อย่อ":"MENA", "ชื่อลูกค้า":"Mena transport", "รอบ":"-", "Head Job":"เปิ้ล", "วันเริ่ม":d(-45), "วันสิ้นสุด":d(-20), "สถานะภาพรวม":"Done", "Progress":"100%" },
-  ];
-
-  document.getElementById("configBanner").innerHTML = `
-    <span>ℹ️</span>
-    <span style="color:var(--upcoming)">กำลังแสดงข้อมูลตัวอย่าง</span>
-    <span style="color:var(--text-dim);font-size:11px;">ใส่ Google Sheets API Key เพื่อดูข้อมูลจริงค่ะ</span>
-    <input type="password" id="apiKeyInput" placeholder="API Key">
-    <button onclick="saveConfig()">เชื่อมต่อ</button>
-  `;
-
-  renderDashboard();
+function AMT_rpDate_(v) {
+  if (v instanceof Date) return isNaN(v.getTime())?null:new Date(v.getFullYear(),v.getMonth(),v.getDate());
+  const s=String(v||"").trim(); if(!s||s==="-") return null;
+  const m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(m){ let y=parseInt(m[3],10); if(y>2500)y-=543; return new Date(y,parseInt(m[2],10)-1,parseInt(m[1],10)); }
+  return null;
 }
-
-// ============================================================
-// Render
-// ============================================================
-function renderDashboard() {
-  const today = new Date(); today.setHours(0,0,0,0);
-
-  // Count by status
-  const counts = { Active:0, Upcoming:0, Late:0, Done:0 };
-  allJobs.forEach(j => { if (counts[j["สถานะภาพรวม"]] !== undefined) counts[j["สถานะภาพรวม"]]++; });
-
-  document.getElementById("countActive").textContent   = counts.Active;
-  document.getElementById("countUpcoming").textContent = counts.Upcoming;
-  document.getElementById("countLate").textContent     = counts.Late;
-  document.getElementById("countDone").textContent     = counts.Done;
-  document.getElementById("totalCount").textContent    = allJobs.length + " งาน";
-
-  // Upcoming alerts (14 days)
-  const upcoming = allJobs.filter(j => {
-    const s = parseDate(j["วันเริ่ม"]);
-    if (!s) return false;
-    const diff = Math.floor((s - today) / 86400000);
-    return diff >= 0 && diff <= 14;
-  }).sort((a,b) => parseDate(a["วันเริ่ม"]) - parseDate(b["วันเริ่ม"]));
-
-  document.getElementById("alertCount").textContent = upcoming.length + " งาน";
-
-  const alertsGrid = document.getElementById("alertsGrid");
-  if (upcoming.length === 0) {
-    alertsGrid.innerHTML = '<div class="empty">ไม่มีงานที่จะเริ่มใน 14 วันข้างหน้าค่ะ</div>';
-  } else {
-    alertsGrid.innerHTML = upcoming.map(j => {
-      const s = parseDate(j["วันเริ่ม"]);
-      const diff = Math.floor((s - today) / 86400000);
-      const daysText = diff === 0 ? "วันนี้!" : `อีก ${diff} วัน`;
-      return `
-        <div class="alert-card">
-          <div class="alert-dot"></div>
-          <div class="alert-content">
-            <div class="alert-job">${j["ชื่อย่อ"]} — ${j["ชื่อลูกค้า"]}</div>
-            <div class="alert-detail">Head: ${j["Head Job"] || "-"} · เริ่ม ${j["วันเริ่ม"]}</div>
-          </div>
-          <div class="alert-days">${daysText}</div>
-        </div>`;
-    }).join("");
-  }
-
-  renderTable(currentFilter);
-}
-
-function renderTable(filter) {
-  currentFilter = filter;
-  const filtered = filter === "all" ? allJobs : allJobs.filter(j => j["สถานะภาพรวม"] === filter);
-  const tbody = document.getElementById("jobTableBody");
-
-  if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6"><div class="empty">ไม่มีข้อมูลค่ะ</div></td></tr>';
-    return;
-  }
-
-  tbody.innerHTML = filtered.map(j => {
-    const status = j["สถานะภาพรวม"] || "Unknown";
-    const statusTH = { Active:"Active", Upcoming:"Upcoming", Late:"ล่าช้า", Done:"เสร็จแล้ว" }[status] || status;
-    const prog = parseInt(j["Progress"] || "0");
-    const initial = (j["Head Job"] || "?")[0].toUpperCase();
-
-    return `
-      <tr>
-        <td>
-          <div class="job-name">${j["ชื่อย่อ"]}</div>
-          <div class="job-client">${j["ชื่อลูกค้า"]}</div>
-        </td>
-        <td>${j["รอบ"] && j["รอบ"] !== "-" ? `<span class="job-round">${j["รอบ"]}</span>` : '<span style="color:var(--text-dim)">—</span>'}</td>
-        <td>
-          <div class="head-job">
-            <div class="avatar">${initial}</div>
-            <span>${j["Head Job"] || "—"}</span>
-          </div>
-        </td>
-        <td>
-          <div class="date-range"><b>${j["วันเริ่ม"] || "—"}</b></div>
-          <div class="date-range" style="margin-top:2px">${j["วันสิ้นสุด"] || "—"}</div>
-        </td>
-        <td><span class="status-badge status-${status}"><span class="dot"></span>${statusTH}</span></td>
-        <td>
-          <div class="progress-wrap">
-            <div class="progress-bar"><div class="progress-fill" style="width:${prog}%"></div></div>
-            <span class="progress-text">${j["Progress"] || "0%"}</span>
-          </div>
-        </td>
-      </tr>`;
-  }).join("");
-}
-
-function filterJobs(filter, btn) {
-  document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
-  btn.classList.add("active");
-  renderTable(filter);
-}
-
-function parseDate(str) {
-  if (!str) return null;
-  const parts = str.split("/");
-  if (parts.length === 3) {
-    let y = parseInt(parts[2]);
-    if (y > 2500) y -= 543; // แปลงจากปีไทย
-    return new Date(y, parseInt(parts[1])-1, parseInt(parts[0]));
-  }
-  return new Date(str);
-}
-</script>
-</body>
-</html>
