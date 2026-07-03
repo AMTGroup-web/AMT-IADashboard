@@ -35,12 +35,12 @@
   .primary{background:var(--brand);color:#fff}.primary:hover{background:var(--brand2)}
   .ghost{background:#eef1f4;color:#333;border:1px solid var(--line)}.ghost:hover{background:#e2e7ec}
   .previewBar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);font-size:13px;color:#66707a;flex-wrap:wrap}
-  .paper{background:#fff;padding:40px 44px;font-family:"TH Sarabun New","Sarabun","Angsana New","Cordia New",Tahoma,serif;color:#000;line-height:1.55;max-height:74vh;overflow:auto}
+  .paper{background:#fff;padding:40px 44px;font-family:"Angsana New","Cordia New","TH Sarabun New","Sarabun",Tahoma,serif;color:#000;line-height:1.15;max-height:74vh;overflow:auto}
   .paper h3{font-size:19px;text-align:center;margin:0 0 4px;font-weight:700}
   .paper .addr{font-weight:700;margin:14px 0 2px}
   .paper .sechead{font-weight:700;margin:16px 0 2px;font-size:17px}
-  .paper p{font-size:17px;margin:8px 0;text-align:justify;text-justify:inter-word}
-  .paper ul{margin:8px 0;padding-left:26px}.paper li{font-size:17px;margin:7px 0;text-align:justify}
+  .paper p{font-size:18px;margin:6px 0;text-align:justify;text-justify:inter-cluster}
+  .paper ul{margin:6px 0;padding-left:26px}.paper li{font-size:18px;margin:5px 0;text-align:justify;text-justify:inter-cluster}
   .paper .sign{margin-top:34px}.paper .sign .c{text-align:center;width:60%;margin-left:auto}
   .paper .dotline{border-bottom:1px dotted #000;width:70%;margin:26px auto 4px}
   .foot{font-size:12px;color:#8a939c;padding:12px 18px;text-align:center}
@@ -369,13 +369,13 @@ function wordHtml(body){
   return "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>"+
   "<head><meta charset='utf-8'>"+
   "<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->"+
-  "<style>@page{size:A4;margin:2.2cm 2.2cm 2.2cm 2.9cm;}"+
-  "body{font-family:'TH Sarabun New','Angsana New','Cordia New';font-size:16pt;line-height:1.5;color:#000}"+
-  "h3{font-size:18pt;text-align:center;font-weight:bold;margin:0 0 4pt}"+
-  ".sechead{font-weight:bold;font-size:16pt;margin:14pt 0 2pt}.addr{font-weight:bold;margin:12pt 0 2pt}"+
-  "p{font-size:16pt;margin:6pt 0;text-align:justify}li{font-size:16pt;margin:5pt 0;text-align:justify}ul{margin:6pt 0}"+
+  "<style>@page Section1{size:21.0cm 29.7cm;margin:2.6cm 1.96cm 2.75cm 3.05cm;mso-page-orientation:portrait;}div.Section1{page:Section1}"+
+  "body{font-family:'Angsana New','Cordia New','TH Sarabun New';font-size:16pt;line-height:1.0;color:#000}"+
+  "h3{font-size:16pt;text-align:center;font-weight:bold;margin:0 0 6pt;line-height:1.0}"+
+  ".sechead{font-weight:bold;font-size:16pt;margin:10pt 0 2pt;line-height:1.0}.addr{font-weight:bold;margin:8pt 0 2pt;line-height:1.0}"+
+  "p{font-size:16pt;margin:6pt 0;text-align:justify;text-justify:inter-cluster;line-height:1.0}li{font-size:16pt;margin:4pt 0;text-align:justify;text-justify:inter-cluster;line-height:1.0}ul{margin:6pt 0}"+
   ".dotline{border-bottom:1px dotted #000;width:60%;margin:24pt auto 4pt}.sign .c{width:60%;margin-left:auto}"+
-  "</style></head><body>"+body+"</body></html>";
+  "</style></head><body><div class=Section1>"+body+"</div></body></html>";
 }
 function triggerDownload(blob,filename){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
 
