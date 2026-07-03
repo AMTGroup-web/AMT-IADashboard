@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>สร้างหน้ารายงานผู้สอบบัญชี — A.M.T. Audit Group</title>
+</head>
+<body>
+<style>
+  :root{ --ink:#1f2933; --line:#d7dde3; --brand:#E87722; --brand2:#c65f10; --bg:#eef1f4; --card:#fff; --ok:#2f855a; --err:#c0392b; --warn:#b7791f; }
+  *{box-sizing:border-box}
+  .app{font-family:"Segoe UI",Tahoma,"Sarabun",sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+  .apphead{background:var(--brand);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .apphead h1{font-size:18px;margin:0;font-weight:700}
+  .apphead .tag{background:rgba(255,255,255,.2);padding:3px 10px;border-radius:20px;font-size:12px}
+  .tabs{display:flex;gap:4px;background:#d9531e;padding:0 20px}
+  .tabs button{background:transparent;border:none;color:#ffe;padding:12px 20px;font-size:15px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent;font-family:inherit}
+  .tabs button.active{background:var(--bg);color:var(--brand2);border-bottom-color:var(--brand)}
+  .view{display:none}.view.active{display:block}
+  .wrap{display:flex;gap:18px;align-items:flex-start;padding:18px;flex-wrap:wrap}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .form{flex:1 1 420px;min-width:320px;padding:18px}
+  .previewCol{flex:1 1 500px;min-width:340px;position:sticky;top:14px}
+  h2.sec{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--brand2);margin:22px 0 10px;border-bottom:2px solid #f0e2d6;padding-bottom:5px}
+  h2.sec:first-child{margin-top:0}
+  .form label,.batchcfg label{display:block;font-size:13px;font-weight:600;margin:12px 0 4px}
+  .hint{font-weight:400;color:#78828c;font-size:12px}
+  .app input[type=text],.app input[type=number],.app select,.app textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:14px;font-family:inherit;background:#fdfdfd}
+  .app input:focus,.app select:focus,.app textarea:focus{outline:2px solid #f3c79a;border-color:var(--brand)}
+  .app textarea{resize:vertical}
+  .row{display:flex;gap:8px}.row>*{flex:1}
+  .chk{display:flex;align-items:center;gap:8px;font-weight:500;font-size:14px;margin:6px 0}.chk input{width:auto}
+  .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+  .btns button,.actbtns button{cursor:pointer;border:none;border-radius:7px;padding:11px 16px;font-size:14px;font-weight:700;font-family:inherit}
+  .primary{background:var(--brand);color:#fff}.primary:hover{background:var(--brand2)}
+  .ghost{background:#eef1f4;color:#333;border:1px solid var(--line)}.ghost:hover{background:#e2e7ec}
+  .previewBar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);font-size:13px;color:#66707a;flex-wrap:wrap}
+  .paper{background:#fff;padding:40px 44px;font-family:"TH Sarabun New","Sarabun","Angsana New","Cordia New",Tahoma,serif;color:#000;line-height:1.55;max-height:74vh;overflow:auto}
+  .paper h3{font-size:19px;text-align:center;margin:0 0 4px;font-weight:700}
+  .paper .addr{font-weight:700;margin:14px 0 2px}
+  .paper .sechead{font-weight:700;margin:16px 0 2px;font-size:17px}
+  .paper p{font-size:17px;margin:8px 0;text-align:justify;text-justify:inter-word}
+  .paper ul{margin:8px 0;padding-left:26px}.paper li{font-size:17px;margin:7px 0;text-align:justify}
+  .paper .sign{margin-top:34px}.paper .sign .c{text-align:center;width:60%;margin-left:auto}
+  .paper .dotline{border-bottom:1px dotted #000;width:70%;margin:26px auto 4px}
+  .foot{font-size:12px;color:#8a939c;padding:12px 18px;text-align:center}
+  details.help{margin:18px 18px 0;background:#fff;border:1px solid var(--line);border-radius:10px;padding:4px 16px}
+  details.help summary{cursor:pointer;font-weight:700;padding:10px 0;color:var(--brand2)}
+  details.help ol,details.help ul{margin:4px 0 14px;padding-left:20px;font-size:14px;line-height:1.7}
+  .batchcfg{padding:18px}
+  .cols{display:flex;gap:18px;flex-wrap:wrap}.cols>div{flex:1 1 150px}
+  table.tpl{border-collapse:collapse;font-size:12.5px;margin:6px 0 2px;width:100%}
+  table.tpl th,table.tpl td{border:1px solid var(--line);padding:5px 8px;text-align:left}
+  table.tpl th{background:#faf3ec;color:var(--brand2)}
+  #batchList{font-size:13.5px;line-height:1.7;max-height:260px;overflow:auto;margin-top:8px}
+  .okrow{color:var(--ok)}.errrow{color:var(--err);font-weight:600}.skiprow{color:var(--warn)}
+  .statusbar{padding:10px 14px;font-size:13px;font-weight:600}
+  .actbtns{display:flex;gap:10px;flex-wrap:wrap;padding:0 18px 18px}
+  code{font-family:Consolas,monospace;background:#f2ede8;padding:1px 5px;border-radius:4px}
+</style>
+
+<div class="app">
+<div class="apphead">
+  <h1>🖋️ สร้างหน้ารายงานผู้สอบบัญชี</h1>
+  <span class="tag">NPAEs · ความเห็นไม่มีเงื่อนไข</span>
+  <span class="tag">A.M.T. Audit Group</span>
+</div>
+
+<div class="tabs">
+  <button id="tab1" class="active" onclick="showTab(1)">📄 ทีละบริษัท</button>
+  <button id="tab2" onclick="showTab(2)">📚 ทีละหลายบริษัท</button>
+</div>
+
+<!-- ============ VIEW 1 : SINGLE ============ -->
+<div id="view1" class="view active">
+<details class="help">
+  <summary>วิธีใช้ (คลิกอ่าน)</summary>
+  <ol>
+    <li>กรอกช่องด้านซ้าย — ตัวอย่างด้านขวาจะเปลี่ยนตามทันที</li>
+    <li>กดปุ่ม <b>ดาวน์โหลดไฟล์ Word (.doc)</b> เพื่อเปิด/แก้ต่อใน Microsoft Word</li>
+    <li>กด <b>บันทึกค่าที่กรอก</b> เก็บไว้ทำบริษัทถัดไปได้เร็วขึ้น</li>
+  </ol>
+</details>
+<div class="wrap">
+  <div class="panel form">
+    <h2 class="sec">ข้อมูลบริษัท / งบ</h2>
+    <label>ชื่อบริษัท <span class="hint">(ใส่คำว่า “บริษัท … จำกัด” ให้ครบ)</span></label>
+    <input type="text" id="company" value="บริษัท อีเอ็มเอ็ม เอ็นจิเนียริ่ง จำกัด">
+    <label>ประเภทกิจการ <span class="hint">(เปลี่ยนคำขึ้นต้น “เสนอ…”)</span></label>
+    <select id="ent">
+      <option value="บริษัท" selected>บริษัทจำกัด — เสนอ ผู้ถือหุ้น</option>
+      <option value="ห้าง">ห้างหุ้นส่วนจำกัด — เสนอ ผู้เป็นหุ้นส่วน</option>
+    </select>
+    <label>วันสิ้นรอบบัญชี (วันที่ในงบ)</label>
+    <div class="row">
+      <input type="number" id="d" min="1" max="31" value="31" title="วันที่">
+      <select id="m" title="เดือน"></select>
+      <input type="number" id="y" value="2567" title="ปี พ.ศ.">
+    </div>
+    <label>งบที่ตรวจสอบ (ติ๊กให้ตรงกับชุดงบ)</label>
+    <div class="chk"><input type="checkbox" id="s_bs" checked disabled><span>งบแสดงฐานะการเงิน <span class="hint">(มีเสมอ)</span></span></div>
+    <div class="chk"><input type="checkbox" id="s_pl" checked><span>งบกำไรขาดทุน</span></div>
+    <div class="chk"><input type="checkbox" id="s_eq" checked><span>งบการเปลี่ยนแปลงส่วนของผู้ถือหุ้น</span></div>
+    <div class="chk"><input type="checkbox" id="s_cf"><span>งบกระแสเงินสด <span class="hint">(NPAEs ส่วนใหญ่ไม่มี)</span></span></div>
+    <label>เกณฑ์มาตรฐานการรายงานทางการเงิน</label>
+    <select id="std">
+      <option value="มาตรฐานการรายงานทางการเงินสำหรับกิจการที่ไม่มีส่วนได้เสียสาธารณะ" selected>NPAEs — กิจการที่ไม่มีส่วนได้เสียสาธารณะ</option>
+      <option value="มาตรฐานการรายงานทางการเงินสำหรับกิจการขนาดกลางและขนาดย่อม">TFRS for SMEs — ขนาดกลางและย่อม</option>
+      <option value="มาตรฐานการรายงานทางการเงิน">TFRS ฉบับเต็ม (PAEs)</option>
+    </select>
+
+    <h2 class="sec">ประเภทความเห็น</h2>
+    <label>ประเภทความเห็น</label>
+    <select id="opinion">
+      <option value="unqualified" selected>ไม่มีเงื่อนไข (Unqualified)</option>
+      <option value="qualified">มีเงื่อนไข (Qualified)</option>
+    </select>
+    <div id="qBox" style="display:none">
+      <label>เนื้อหา “เกณฑ์ในการแสดงความเห็นอย่างมีเงื่อนไข”
+        <span class="hint">อธิบายเรื่องที่ทำให้มีเงื่อนไข (หัวข้อ + ประโยคปิดมาตรฐานขึ้นให้เอง)</span></label>
+      <textarea id="qBasis" rows="4" placeholder="เช่น ข้าพเจ้าไม่สามารถสังเกตการณ์การตรวจนับสินค้าคงเหลือ ณ วันที่ 31 ธันวาคม 2567 ซึ่งมีจำนวนเงิน ... เนื่องจาก ..."></textarea>
+    </div>
+    <div class="chk"><input type="checkbox" id="gcOn"><span>เพิ่มวรรคความไม่แน่นอนเรื่องการดำเนินงานต่อเนื่อง (Going Concern)</span></div>
+    <div id="gcBox" style="display:none">
+      <label>เนื้อหาวรรค Going Concern <span class="hint">(แก้ข้อความให้ตรงงานได้)</span></label>
+      <textarea id="gc" rows="5"></textarea>
+    </div>
+
+    <h2 class="sec">วรรค “เรื่องอื่น” (งบปีก่อน)</h2>
+    <label>สถานะการตรวจงบปีก่อน</label>
+    <select id="prevMode">
+      <option value="other" selected>ปีก่อนตรวจโดยผู้สอบบัญชีอื่น</option>
+      <option value="self">ปีก่อนตรวจโดยสำนักงานเรา (นำมาเปรียบเทียบ)</option>
+      <option value="none">ไม่ต้องมีวรรคเรื่องอื่น (เช่น ปีแรก)</option>
+    </select>
+    <div id="prevBox">
+      <label>วันสิ้นรอบบัญชีปีก่อน</label>
+      <div class="row">
+        <input type="number" id="pd" min="1" max="31" value="31">
+        <select id="pm"></select>
+        <input type="number" id="py" value="2566">
+      </div>
+      <div class="row">
+        <div><label>ความเห็นปีก่อน</label>
+          <select id="prevOp"><option>ไม่มีเงื่อนไข</option><option>มีเงื่อนไข</option></select>
+        </div>
+        <div><label>วันที่รายงานปีก่อน</label>
+          <div class="row">
+            <input type="number" id="prd" min="1" max="31" value="1">
+            <select id="prm"></select>
+            <input type="number" id="pry" value="2567">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="sec">วรรคเน้นข้อมูลและเหตุการณ์ (ถ้ามี)</h2>
+    <label>วรรคเน้นข้อมูลและเหตุการณ์ (Emphasis of Matter)
+      <span class="hint">เว้นว่างถ้าไม่มี — พิมพ์เฉพาะเนื้อความ หัวข้อขึ้นให้เอง (คนละส่วนกับ Going Concern ด้านบน)</span></label>
+    <textarea id="eom" rows="3" placeholder="เช่น ข้าพเจ้าขอให้สังเกตหมายเหตุประกอบงบการเงินข้อ ..."></textarea>
+
+    <h2 class="sec">ผู้ลงนาม / วันที่</h2>
+    <label>ชื่อผู้สอบบัญชี</label>
+    <input type="text" id="auditor" value="นายสุพจน์ ปานน้อย">
+    <label>เลขที่ใบอนุญาต</label>
+    <input type="text" id="license" value="9240">
+    <label>ชื่อสำนักงาน</label>
+    <input type="text" id="firm" value="บริษัท สำนักงาน เอ.เอ็ม.ที. ออดิท กรุ๊ป จำกัด">
+    <label>สถานที่ออกรายงาน <span class="hint">(เว้นว่างได้)</span></label>
+    <input type="text" id="place" value="กรุงเทพมหานคร">
+    <label>วันที่ในรายงาน</label>
+    <div class="row">
+      <input type="number" id="rd" min="1" max="31" value="25">
+      <select id="rm"></select>
+      <input type="number" id="ry" value="2568">
+    </div>
+
+    <div class="btns">
+      <button class="primary" onclick="dlSingle()">⬇️ ดาวน์โหลดไฟล์ Word (.doc)</button>
+      <button class="ghost" onclick="window.print()">🖨️ พิมพ์ / PDF</button>
+      <button class="ghost" onclick="saveLocal()">💾 บันทึกค่า</button>
+      <button class="ghost" onclick="loadLocal()">📂 โหลดค่า</button>
+    </div>
+  </div>
+
+  <div class="panel previewCol">
+    <div class="previewBar"><span>ตัวอย่างเอกสาร (อัปเดตอัตโนมัติ)</span><span id="fname"></span></div>
+    <div class="paper" id="paper"></div>
+    <div class="foot">ตรวจทานเนื้อความก่อนส่งงานทุกครั้ง</div>
+  </div>
+</div>
+</div>
+
+<!-- ============ VIEW 2 : BATCH ============ -->
+<div id="view2" class="view">
+<details class="help" open>
+  <summary>วิธีใช้แบบทีละหลายบริษัท (คลิกอ่าน)</summary>
+  <ol>
+    <li>ตั้ง <b>ค่าที่ใช้ร่วมกัน</b> (ผู้สอบ/เลขที่/สำนักงาน/เกณฑ์) — ใช้กับทุกรายในรอบนี้</li>
+    <li>ในชีต <code>บจก-หจก</code> ให้ <b>ลากคลุมทั้งแถวหัวตาราง (แถวที่มีคำว่า “ชื่อบริษัท”) ลงมาถึงรายที่ต้องการ</b> แล้วก๊อป → มาวางในกล่องด้านล่าง</li>
+    <li>กด <b>ตรวจข้อมูล</b> ระบบจับคอลัมน์ให้เองจากหัวตาราง แล้วเลือกดาวน์โหลด <b>แยกไฟล์ (.zip)</b> หรือ <b>รวมไฟล์เดียว (.doc)</b></li>
+  </ol>
+  <b>คอลัมน์ที่ระบบอ่าน (จับจากชื่อหัวตาราง เรียงคอลัมน์ยังไงก็ได้):</b>
+  <table class="tpl">
+    <tr><th>ชื่อบริษัท</th><th>วันสิ้นสุดรอบบัญชี</th><th>วันที่หน้ารายงาน</th><th>วันที่รายงานปีก่อน</th><th>รูปแบบหน้ารายงาน</th></tr>
+    <tr><td>บริษัท … จำกัด</td><td>31/12/2568</td><td>20/2/2569</td><td>(ว่าง = ไม่มีวรรคเรื่องอื่น)</td><td>ไม่มีเงื่อนไข</td></tr>
+  </table>
+  <ul>
+    <li><b>รองรับ:</b> บริษัทจำกัด และ ห้างหุ้นส่วนจำกัด (เปลี่ยนคำขึ้นต้นให้อัตโนมัติ)</li>
+    <li><b>ข้าม (ขึ้นรายการเตือน):</b> คอนโด/หมู่บ้าน/นิติบุคคล (ต้องใช้เทมเพลตเฉพาะ) และรายที่ความเห็นไม่ใช่ “ไม่มีเงื่อนไข”</li>
+    <li>ถ้าตารางไม่มีคอลัมน์วันสิ้นรอบบัญชี ระบบใช้ “ค่าเริ่มต้น” ที่ตั้งไว้ · วันที่รับได้ทั้ง พ.ศ./ค.ศ.</li>
+  </ul>
+</details>
+
+<div class="wrap">
+  <div class="panel batchcfg" style="flex:1 1 100%">
+    <h2 class="sec">ค่าที่ใช้ร่วมกันทุกราย</h2>
+    <div class="cols">
+      <div><label>ชื่อผู้สอบบัญชี</label><input type="text" id="b_auditor" value="นายสุพจน์ ปานน้อย"></div>
+      <div><label>เลขที่ใบอนุญาต</label><input type="text" id="b_license" value="9240"></div>
+      <div><label>สถานที่ออกรายงาน</label><input type="text" id="b_place" value="กรุงเทพมหานคร"></div>
+    </div>
+    <div class="cols">
+      <div><label>ชื่อสำนักงาน</label><input type="text" id="b_firm" value="บริษัท สำนักงาน เอ.เอ็ม.ที. ออดิท กรุ๊ป จำกัด"></div>
+      <div><label>เกณฑ์มาตรฐาน</label>
+        <select id="b_std">
+          <option value="มาตรฐานการรายงานทางการเงินสำหรับกิจการที่ไม่มีส่วนได้เสียสาธารณะ" selected>NPAEs</option>
+          <option value="มาตรฐานการรายงานทางการเงินสำหรับกิจการขนาดกลางและขนาดย่อม">TFRS for SMEs</option>
+          <option value="มาตรฐานการรายงานทางการเงิน">TFRS ฉบับเต็ม (PAEs)</option>
+        </select>
+      </div>
+    </div>
+    <div class="cols">
+      <div><label>งบที่ตรวจ (ค่าเริ่มต้นทุกราย)</label>
+        <div class="chk"><input type="checkbox" id="b_pl" checked><span>งบกำไรขาดทุน</span></div>
+        <div class="chk"><input type="checkbox" id="b_eq" checked><span>งบการเปลี่ยนแปลงส่วนของผู้ถือหุ้น</span></div>
+      </div>
+      <div><label>วรรคเรื่องอื่น (เมื่อมีวันที่ปีก่อน)</label>
+        <select id="b_prevMode">
+          <option value="other" selected>ตรวจโดยผู้สอบบัญชีอื่น</option>
+          <option value="self">ตรวจโดยสำนักงานเรา</option>
+        </select>
+        <label style="margin-top:8px">ความเห็นปีก่อน</label>
+        <select id="b_prevOp"><option>ไม่มีเงื่อนไข</option><option>มีเงื่อนไข</option></select>
+      </div>
+      <div><label>วันสิ้นรอบบัญชี (ค่าเริ่มต้น ถ้าตารางไม่มี)</label>
+        <div class="row">
+          <input type="number" id="b_fd" min="1" max="31" value="31">
+          <select id="b_fm"></select>
+          <input type="number" id="b_fy" value="2568">
+        </div>
+      </div>
+    </div>
+
+    <h2 class="sec">ดึงจาก Google Sheet (Feed) — ไม่ต้องก๊อปวาง</h2>
+    <div class="cols">
+      <div style="flex:1 1 100%"><label>ลิงก์ชีต Feed <span class="hint">(แชร์แบบ “ใครมีลิงก์ดูได้”)</span></label>
+        <input type="text" id="gsUrl" placeholder="วางลิงก์ Google Sheet Feed ที่นี่"></div>
+      <div><label>ชื่อแท็บ <span class="hint">(เว้นว่าง = แท็บแรก)</span></label>
+        <input type="text" id="gsSheet" placeholder="เช่น 69"></div>
+    </div>
+    <div class="btns">
+      <button class="primary" onclick="fetchSheet()">🔄 ดึงข้อมูลจากชีต</button>
+      <span class="hint" style="align-self:center">ใช้ได้เมื่อเปิดผ่านลิงก์ GitHub (เปิดไฟล์ในเครื่อง/พรีวิวจะดึงไม่ได้ — ใช้วางตารางด้านล่างแทน)</span>
+    </div>
+
+    <h2 class="sec">หรือวางตารางเอง (รวมแถวหัวตาราง)</h2>
+    <textarea id="batchData" rows="8" spellcheck="false" placeholder="วางตารางจากชีต บจก-หจก ที่นี่ (รวมแถวหัวที่มีคำว่า ชื่อบริษัท)"></textarea>
+    <div class="btns">
+      <button class="primary" onclick="parseBatch()">🔍 ตรวจข้อมูล / ดูตัวอย่าง</button>
+      <button class="ghost" onclick="loadSample()">ใส่ตัวอย่าง</button>
+    </div>
+    <div id="batchStatus" class="statusbar"></div>
+    <div id="batchList"></div>
+    <div class="actbtns" id="batchActs" style="display:none">
+      <button class="primary" onclick="dlZip()">⬇️ ดาวน์โหลดแยกไฟล์ (.zip)</button>
+      <button class="primary" onclick="dlCombined()">⬇️ รวมเป็นไฟล์เดียว (.doc)</button>
+    </div>
+  </div>
+
+  <div class="panel previewCol" style="flex:1 1 100%">
+    <div class="previewBar"><span id="bpvTitle">ตัวอย่างรายแรก</span></div>
+    <div class="paper" id="bpaper"><p style="color:#8a939c">กด “ตรวจข้อมูล” เพื่อดูตัวอย่างเอกสารรายแรก</p></div>
+  </div>
+</div>
+</div>
+</div>
+
+<script>
+const TH_MONTHS=["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+["m","pm","prm","rm","b_fm"].forEach(id=>{const sel=document.getElementById(id);TH_MONTHS.forEach((mn,i)=>{const o=document.createElement("option");o.value=i+1;o.textContent=mn;sel.appendChild(o);});});
+const $=id=>document.getElementById(id);
+$("m").value=12;$("pm").value=12;$("prm").value=4;$("rm").value=8;$("b_fm").value=12;
+
+function showTab(n){$("tab1").classList.toggle("active",n===1);$("tab2").classList.toggle("active",n===2);$("view1").classList.toggle("active",n===1);$("view2").classList.toggle("active",n===2);}
+function shortName(c){return c.replace(/^บริษัท\s*/,"").replace(/^ห้างหุ้นส่วนจำกัด\s*/,"หจก.").replace(/\s*จำกัด.*$/,"").trim();}
+function fmt(d,m,y){return d+" "+TH_MONTHS[m-1]+" "+y;}
+function d3(dd,mm,yy){return fmt(+$(dd).value,+$(mm).value,$(yy).value);}
+
+// ระบุประเภทกิจการจากชื่อ → คำขึ้นต้น + คำเรียกกิจการในเนื้อรายงาน
+function entityInfo(name){
+  const n=(name||"").trim();
+  if(n.startsWith("ห้างหุ้นส่วน")||/^หจก|^ห\.?จ\.?ก/.test(n)) return {ok:true,term:"ห้าง",abbr:"ห้าง",sal:"ผู้เป็นหุ้นส่วนของ",kind:"ห้างหุ้นส่วน"};
+  if(n.startsWith("บริษัท")||/^บจก|^บมจ/.test(n)) return {ok:true,term:"บริษัท",abbr:"บริษัท",sal:"ผู้ถือหุ้นของ",kind:"บริษัท"};
+  let kind="อื่น/ไม่ชัด";
+  if(n.startsWith("นิติบุคคลอาคารชุด")) kind="นิติบุคคลอาคารชุด";
+  else if(n.startsWith("นิติบุคคลหมู่บ้าน")||n.indexOf("หมู่บ้านจัดสรร")>=0) kind="นิติบุคคลหมู่บ้าน";
+  else if(n.startsWith("นิติ")) kind="นิติบุคคล";
+  return {ok:false,kind:kind};
+}
+
+function flowList(o){
+  const arr=[];
+  if(o.hasPL)arr.push("งบกำไรขาดทุน");
+  if(o.hasEQ)arr.push("งบการเปลี่ยนแปลงส่วนของผู้ถือหุ้น");
+  if(o.hasCF)arr.push("งบกระแสเงินสด");
+  if(!arr.length)return "";
+  if(arr.length===1)return arr[0];
+  return arr.slice(0,-1).join(" ")+" และ"+arr[arr.length-1];
+}
+
+function buildReportBody(o){
+  const T=o.term||"บริษัท", AB=o.abbr||"บริษัท", SAL=o.sal||"ผู้ถือหุ้นของ";
+  const cf=o.hasCF?" และกระแสเงินสด":"";
+  const fl=flowList(o);
+  const flTxt=fl?(" "+fl+" สำหรับปีสิ้นสุดวันเดียวกัน"):" สำหรับปีสิ้นสุดวันเดียวกัน";
+  let h="";
+  h+='<h3>รายงานของผู้สอบบัญชีรับอนุญาต</h3>';
+  h+='<p class="addr">เสนอ '+SAL+o.company+'</p>';
+  const qual=o.opinion==="qualified";
+  h+='<div class="sechead">'+(qual?'ความเห็นอย่างมีเงื่อนไข':'ความเห็น')+'</div>';
+  h+='<p>ข้าพเจ้าได้ตรวจสอบงบการเงินของ'+o.company+' ('+AB+') ซึ่งประกอบด้วยงบแสดงฐานะการเงิน ณ วันที่ '+o.date+flTxt+' และหมายเหตุประกอบงบการเงิน รวมถึงสรุปนโยบายการบัญชีที่สำคัญ</p>';
+  h+='<p>ข้าพเจ้าเห็นว่า '+(qual?'ยกเว้นผลกระทบของเรื่องที่กล่าวไว้ในวรรคเกณฑ์ในการแสดงความเห็นอย่างมีเงื่อนไข ':'')+'งบการเงินข้างต้นนี้แสดงฐานะการเงินของ'+o.company+' ณ วันที่ '+o.date+' ผลการดำเนินงาน'+cf+' สำหรับปีสิ้นสุดวันเดียวกัน โดยถูกต้องตามที่ควรในสาระสำคัญตาม'+o.std+'</p>';
+  h+='<div class="sechead">'+(qual?'เกณฑ์ในการแสดงความเห็นอย่างมีเงื่อนไข':'เกณฑ์ในการแสดงความเห็น')+'</div>';
+  if(qual && o.qBasis){h+='<p>'+o.qBasis.replace(/\n+/g,"</p><p>")+'</p>';}
+  h+='<p>ข้าพเจ้าได้ปฏิบัติงานตรวจสอบตามมาตรฐานการสอบบัญชี ความรับผิดชอบของข้าพเจ้าได้กล่าวไว้ในวรรคความรับผิดชอบของผู้สอบบัญชีต่อการตรวจสอบงบการเงินในรายงานของข้าพเจ้า ข้าพเจ้ามีความเป็นอิสระจาก'+T+'ตามประมวลจรรยาบรรณของผู้ประกอบวิชาชีพบัญชี รวมถึงมาตรฐานเรื่องความเป็นอิสระที่กำหนดโดยสภาวิชาชีพบัญชี (ประมวลจรรยาบรรณของผู้ประกอบวิชาชีพบัญชี) ในส่วนที่เกี่ยวข้องกับการตรวจสอบงบการเงิน และข้าพเจ้าได้ปฏิบัติตามความรับผิดชอบด้านจรรยาบรรณอื่น ๆ ตามประมวลจรรยาบรรณของผู้ประกอบวิชาชีพบัญชี ข้าพเจ้าเชื่อว่าหลักฐานการสอบบัญชีที่ข้าพเจ้าได้รับเพียงพอและเหมาะสมเพื่อใช้เป็นเกณฑ์ในการแสดงความเห็น'+(qual?'อย่างมีเงื่อนไข':'')+'ของข้าพเจ้า</p>';
+  if(o.gc){h+='<div class="sechead">ความไม่แน่นอนที่มีสาระสำคัญที่เกี่ยวข้องกับการดำเนินงานต่อเนื่อง</div>';h+='<p>'+o.gc.replace(/\n+/g,"</p><p>")+'</p>';}
+  if(o.eom){h+='<div class="sechead">ข้อมูลและเหตุการณ์ที่เน้น</div>';h+='<p>'+o.eom.replace(/\n+/g,"</p><p>")+'</p>';}
+  if(o.prevMode!=="none"){
+    h+='<div class="sechead">เรื่องอื่น</div>';
+    if(o.prevMode==="other")
+      h+='<p>งบการเงินของ'+o.company+' สำหรับปีสิ้นสุดวันที่ '+o.prevDate+' ที่นำมาแสดงเปรียบเทียบ ได้ตรวจสอบโดยผู้สอบบัญชีอื่น ซึ่งแสดงความเห็นอย่าง'+o.prevOp+'ตามรายงานลงวันที่ '+o.prevRep+'</p>';
+    else
+      h+='<p>งบการเงินของ'+o.company+' สำหรับปีสิ้นสุดวันที่ '+o.prevDate+' ที่นำมาแสดงเปรียบเทียบ ข้าพเจ้าเป็นผู้ตรวจสอบ และได้แสดงความเห็นอย่าง'+o.prevOp+'ตามรายงานลงวันที่ '+o.prevRep+'</p>';
+  }
+  h+='<div class="sechead">ความรับผิดชอบของผู้บริหารต่องบการเงิน</div>';
+  h+='<p>ผู้บริหารมีหน้าที่รับผิดชอบในการจัดทำและนำเสนองบการเงินเหล่านี้โดยถูกต้องตามที่ควรตาม'+o.std+' และรับผิดชอบเกี่ยวกับการควบคุมภายในที่ผู้บริหารพิจารณาว่าจำเป็น เพื่อให้สามารถจัดทำงบการเงินที่ปราศจากการแสดงข้อมูลที่ขัดต่อข้อเท็จจริงอันเป็นสาระสำคัญไม่ว่าจะเกิดจากการทุจริตหรือข้อผิดพลาด</p>';
+  h+='<p>ในการจัดทำงบการเงิน ผู้บริหารรับผิดชอบในการประเมินความสามารถของ'+T+'ในการดำเนินงานต่อเนื่อง เปิดเผยเรื่องที่เกี่ยวกับการดำเนินงานต่อเนื่อง (ตามความเหมาะสม) และการใช้เกณฑ์การบัญชีสำหรับการดำเนินงานต่อเนื่อง เว้นแต่ผู้บริหารมีความตั้งใจที่จะเลิก'+T+'หรือหยุดดำเนินงาน หรือไม่สามารถดำเนินงานต่อเนื่องต่อไปได้</p>';
+  h+='<div class="sechead">ความรับผิดชอบของผู้สอบบัญชีต่อการตรวจสอบงบการเงิน</div>';
+  h+='<p>การตรวจสอบของข้าพเจ้ามีวัตถุประสงค์เพื่อให้ได้ความเชื่อมั่นอย่างสมเหตุสมผลว่างบการเงินโดยรวมปราศจากการแสดงข้อมูลที่ขัดต่อข้อเท็จจริงอันเป็นสาระสำคัญหรือไม่ ไม่ว่าจะเกิดจากการทุจริตหรือข้อผิดพลาด และเสนอรายงานของผู้สอบบัญชีซึ่งรวมความเห็นของข้าพเจ้าอยู่ด้วย ความเชื่อมั่นอย่างสมเหตุสมผลคือความเชื่อมั่นในระดับสูง แต่ไม่ได้เป็นการรับประกันว่าการปฏิบัติงานตรวจสอบตามมาตรฐานการสอบบัญชีจะสามารถตรวจพบข้อมูลที่ขัดต่อข้อเท็จจริงอันเป็นสาระสำคัญที่มีอยู่ได้เสมอไป ข้อมูลที่ขัดต่อข้อเท็จจริงอาจเกิดจากการทุจริตหรือข้อผิดพลาด และถือว่ามีสาระสำคัญเมื่อคาดการณ์ได้อย่างสมเหตุสมผลว่ารายการที่ขัดต่อข้อเท็จจริงแต่ละรายการหรือทุกรายการรวมกัน จะมีผลต่อการตัดสินใจทางเศรษฐกิจของผู้ใช้งบการเงินจากการใช้งบการเงินเหล่านี้</p>';
+  h+='<p>ในการตรวจสอบของข้าพเจ้าตามมาตรฐานการสอบบัญชี ข้าพเจ้าได้ใช้ดุลยพินิจและการสังเกตและสงสัยเยี่ยงผู้ประกอบวิชาชีพตลอดการตรวจสอบ การปฏิบัติงานของข้าพเจ้ารวมถึง</p>';
+  h+='<ul>';
+  h+='<li>ระบุและประเมินความเสี่ยงจากการแสดงข้อมูลที่ขัดต่อข้อเท็จจริงอันเป็นสาระสำคัญในงบการเงินไม่ว่าจะเกิดจากการทุจริตหรือข้อผิดพลาด ออกแบบและปฏิบัติงานตามวิธีการตรวจสอบเพื่อตอบสนองต่อความเสี่ยงเหล่านั้น และได้หลักฐานการสอบบัญชีที่เพียงพอและเหมาะสมเพื่อเป็นเกณฑ์ในการแสดงความเห็นของข้าพเจ้า ความเสี่ยงที่ไม่พบข้อมูลที่ขัดต่อข้อเท็จจริงอันเป็นสาระสำคัญซึ่งเป็นผลมาจากการทุจริตจะสูงกว่าความเสี่ยงที่เกิดจากข้อผิดพลาด เนื่องจากการทุจริตอาจเกี่ยวกับการสมรู้ร่วมคิด การปลอมแปลงเอกสารหลักฐาน การตั้งใจละเว้นการแสดงข้อมูล การแสดงข้อมูลที่ไม่ตรงตามข้อเท็จจริงหรือการแทรกแซงการควบคุมภายใน</li>';
+  h+='<li>ทำความเข้าใจในระบบการควบคุมภายในที่เกี่ยวข้องกับการตรวจสอบ เพื่อออกแบบวิธีการตรวจสอบที่เหมาะสมกับสถานการณ์ แต่ไม่ใช่เพื่อวัตถุประสงค์ในการแสดงความเห็นต่อความมีประสิทธิผลของการควบคุมภายในของ'+T+'</li>';
+  h+='<li>ประเมินความเหมาะสมของนโยบายการบัญชีที่ผู้บริหารใช้และความสมเหตุสมผลของประมาณการทางบัญชีและการเปิดเผยข้อมูลที่เกี่ยวข้องซึ่งจัดทำขึ้นโดยผู้บริหาร</li>';
+  h+='<li>สรุปเกี่ยวกับความเหมาะสมของการใช้เกณฑ์การบัญชีสำหรับการดำเนินงานต่อเนื่องของผู้บริหาร และจากหลักฐานการสอบบัญชีที่ได้รับ สรุปว่ามีความไม่แน่นอนที่มีสาระสำคัญที่เกี่ยวกับเหตุการณ์หรือสถานการณ์ที่อาจเป็นเหตุให้เกิดข้อสงสัยอย่างมีนัยสำคัญต่อความสามารถของ'+T+'ในการดำเนินงานต่อเนื่องหรือไม่ ถ้าข้าพเจ้าได้ข้อสรุปว่ามีความไม่แน่นอนที่มีสาระสำคัญ ข้าพเจ้าต้องกล่าวไว้ในรายงานของผู้สอบบัญชีของข้าพเจ้าโดยให้ข้อสังเกตถึงการเปิดเผยข้อมูลในงบการเงินที่เกี่ยวข้อง หรือถ้าการเปิดเผยข้อมูลดังกล่าวไม่เพียงพอ ความเห็นของข้าพเจ้าจะเปลี่ยนแปลงไป ข้อสรุปของข้าพเจ้าขึ้นอยู่กับหลักฐานการสอบบัญชีที่ได้รับจนถึงวันที่ในรายงานของผู้สอบบัญชีของข้าพเจ้า อย่างไรก็ตาม เหตุการณ์หรือสถานการณ์ในอนาคตอาจเป็นเหตุให้'+T+'ต้องหยุดการดำเนินงานต่อเนื่อง</li>';
+  h+='<li>ประเมินการนำเสนอ โครงสร้างและเนื้อหาของงบการเงินโดยรวม รวมถึงการเปิดเผยข้อมูลว่างบการเงินแสดงรายการและเหตุการณ์ในรูปแบบที่ทำให้มีการนำเสนอข้อมูลโดยถูกต้องตามที่ควรหรือไม่</li>';
+  h+='</ul>';
+  h+='<p>ข้าพเจ้าได้สื่อสารกับผู้บริหารในเรื่องต่าง ๆ ที่สำคัญ ซึ่งรวมถึงขอบเขตและช่วงเวลาของการตรวจสอบตามที่ได้วางแผนไว้ ประเด็นที่มีนัยสำคัญที่พบจากการตรวจสอบ รวมถึงข้อบกพร่องที่มีนัยสำคัญในระบบการควบคุมภายในหากข้าพเจ้าได้พบในระหว่างการตรวจสอบของข้าพเจ้า</p>';
+  h+='<div class="sign"><div class="c"><div class="dotline"></div>';
+  h+='<p style="text-align:center;margin:2px 0">('+o.auditor+')</p>';
+  h+='<p style="text-align:center;margin:2px 0">ผู้สอบบัญชีรับอนุญาต เลขที่ '+o.license+'</p>';
+  h+='<p style="text-align:center;margin:2px 0">'+o.firm+'</p></div>';
+  h+='<p style="margin:14px 0 0">'+(o.place?o.place+"<br>":"")+'วันที่ '+o.rdate+'</p></div>';
+  return h;
+}
+
+function wordHtml(body){
+  return "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>"+
+  "<head><meta charset='utf-8'>"+
+  "<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->"+
+  "<style>@page{size:A4;margin:2.2cm 2.2cm 2.2cm 2.9cm;}"+
+  "body{font-family:'TH Sarabun New','Angsana New','Cordia New';font-size:16pt;line-height:1.5;color:#000}"+
+  "h3{font-size:18pt;text-align:center;font-weight:bold;margin:0 0 4pt}"+
+  ".sechead{font-weight:bold;font-size:16pt;margin:14pt 0 2pt}.addr{font-weight:bold;margin:12pt 0 2pt}"+
+  "p{font-size:16pt;margin:6pt 0;text-align:justify}li{font-size:16pt;margin:5pt 0;text-align:justify}ul{margin:6pt 0}"+
+  ".dotline{border-bottom:1px dotted #000;width:60%;margin:24pt auto 4pt}.sign .c{width:60%;margin-left:auto}"+
+  "</style></head><body>"+body+"</body></html>";
+}
+function triggerDownload(blob,filename){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+
+// ====== SINGLE ======
+function gatherSingle(){
+  const ent=$("ent").value;
+  const ei=ent==="ห้าง"?{term:"ห้าง",abbr:"ห้าง",sal:"ผู้เป็นหุ้นส่วนของ"}:{term:"บริษัท",abbr:"บริษัท",sal:"ผู้ถือหุ้นของ"};
+  return {company:$("company").value.trim(),term:ei.term,abbr:ei.abbr,sal:ei.sal,date:d3("d","m","y"),std:$("std").value,
+    opinion:$("opinion").value,qBasis:$("qBasis").value.trim(),gc:$("gcOn").checked?$("gc").value.trim():"",
+    hasPL:$("s_pl").checked,hasEQ:$("s_eq").checked,hasCF:$("s_cf").checked,eom:$("eom").value.trim(),
+    prevMode:$("prevMode").value,prevDate:d3("pd","pm","py"),prevOp:$("prevOp").value,prevRep:d3("prd","prm","pry"),
+    auditor:$("auditor").value.trim(),license:$("license").value.trim(),firm:$("firm").value.trim(),
+    place:$("place").value.trim(),rdate:d3("rd","rm","ry"),year:$("y").value};
+}
+const GC_TMPL="ข้าพเจ้าขอให้สังเกตหมายเหตุประกอบงบการเงินข้อ ... ซึ่งอธิบายถึงเหตุการณ์หรือสถานการณ์ที่แสดงให้เห็นว่ามีความไม่แน่นอนที่มีสาระสำคัญ ซึ่งอาจเป็นเหตุให้เกิดข้อสงสัยอย่างมีนัยสำคัญเกี่ยวกับความสามารถในการดำเนินงานต่อเนื่องของกิจการ อย่างไรก็ตาม ความเห็นของข้าพเจ้าต่อเรื่องนี้ไม่ได้เปลี่ยนแปลงไป";
+function renderSingle(){const o=gatherSingle();$("paper").innerHTML=buildReportBody(o);$("fname").textContent="รายงานผู้สอบบัญชี "+shortName(o.company)+" "+o.year+".doc";$("prevBox").style.display=$("prevMode").value==="none"?"none":"block";$("qBox").style.display=$("opinion").value==="qualified"?"block":"none";$("gcBox").style.display=$("gcOn").checked?"block":"none";}
+$("gcOn").addEventListener("change",()=>{if($("gcOn").checked && !$("gc").value.trim()){$("gc").value=GC_TMPL;}renderSingle();});
+const Q_TMPL="ณ วันที่ [วันสิ้นรอบบัญชี] บริษัทมีสินค้าคงเหลือแสดงในงบแสดงฐานะการเงินจำนวน ......... บาท ข้าพเจ้าไม่ได้เข้าสังเกตการณ์การตรวจนับสินค้าคงเหลือดังกล่าว และไม่สามารถใช้วิธีการตรวจสอบอื่นให้เป็นที่พอใจในปริมาณและมูลค่าของสินค้าคงเหลือได้ ดังนั้น ข้าพเจ้าจึงไม่สามารถสรุปได้ว่าจำเป็นต้องปรับปรุงรายการเกี่ยวกับสินค้าคงเหลือหรือไม่";
+$("opinion").addEventListener("change",()=>{if($("opinion").value==="qualified" && !$("qBasis").value.trim()){$("qBasis").value=Q_TMPL;}renderSingle();});
+function dlSingle(){const o=gatherSingle();triggerDownload(new Blob(["﻿",wordHtml(buildReportBody(o))],{type:"application/msword"}),"รายงานผู้สอบบัญชี "+shortName(o.company)+" "+o.year+".doc");}
+$("y").addEventListener("input",()=>{$("py").value=(+$("y").value)-1;$("pry").value=(+$("y").value);renderSingle();});
+
+const FIELDS=["company","ent","d","m","y","s_pl","s_eq","s_cf","std","opinion","qBasis","gcOn","gc","prevMode","pd","pm","py","prevOp","prd","prm","pry","eom","auditor","license","firm","place","rd","rm","ry"];
+function saveLocal(){const o={};FIELDS.forEach(f=>{const el=$(f);o[f]=el.type==="checkbox"?el.checked:el.value;});try{localStorage.setItem("amt_auditreport",JSON.stringify(o));alert("บันทึกค่าเรียบร้อย ✓");}catch(e){alert("บันทึกไม่ได้ในหน้านี้ ใช้ปุ่มดาวน์โหลด Word แทนได้เลย");}}
+function loadLocal(){let s=null;try{s=localStorage.getItem("amt_auditreport");}catch(e){}if(!s){alert("ยังไม่มีค่าที่บันทึกไว้");return;}const o=JSON.parse(s);FIELDS.forEach(f=>{if(o[f]===undefined)return;const el=$(f);if(el.type==="checkbox")el.checked=o[f];else el.value=o[f];});renderSingle();}
+document.querySelectorAll("#view1 input,#view1 select,#view1 textarea").forEach(el=>{el.addEventListener("input",renderSingle);el.addEventListener("change",renderSingle);});
+
+// ====== BATCH ======
+function parseDate(s){
+  s=(s==null?"":s).toString().trim();if(!s)return null;
+  let y,mo,d,m;
+  m=s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m){y=+m[1];mo=+m[2];d=+m[3];}
+  else{
+    m=s.match(/(\d{1,2})[\/\-.\s]+(\d{1,2})[\/\-.\s]+(\d{2,4})/);
+    if(m){d=+m[1];mo=+m[2];y=+m[3];}
+    else{let m2=s.match(/(\d{1,2})\s+([฀-๿]+)\s+(\d{4})/);if(m2){let idx=TH_MONTHS.indexOf(m2[2]);if(idx>=0)return{text:s,d:+m2[1],m:idx+1,y:+m2[3]};}return null;}
+  }
+  if(y<100)y+=2500;if(y<2200)y+=543;
+  if(mo<1||mo>12||d<1||d>31)return null;
+  return{text:fmt(d,mo,y),d:d,m:mo,y:y};
+}
+function findCol(hdr,keys){for(let i=0;i<hdr.length;i++){const c=(hdr[i]||"").toString().trim();for(const k of keys)if(c.indexOf(k)>=0)return i;}return -1;}
+let BATCH=[];
+function loadSample(){
+  $("batchData").value=
+"ชื่อบริษัท\tวันสิ้นสุดรอบบัญชี\tวันที่หน้ารายงาน\tวันที่รายงานปีก่อน\tรูปแบบหน้ารายงาน\n"+
+"บริษัท อีเอ็มเอ็ม เอ็นจิเนียริ่ง จำกัด\t31/12/2567\t25/8/2568\t1/4/2567\tไม่มีเงื่อนไข\n"+
+"ห้างหุ้นส่วนจำกัด ตัวอย่าง การช่าง\t31/12/2567\t20/8/2568\t\tไม่มีเงื่อนไข\n"+
+"นิติบุคคลอาคารชุด ตัวอย่าง คอนโด\t31/12/2567\t22/8/2568\t\tไม่มีเงื่อนไข\n"+
+"บริษัท เอ บี ซี จำกัด\t31/12/2567\t18/8/2568\t\tมีเงื่อนไข";
+}
+function parseBatch(){
+  const cfg={std:$("b_std").value,auditor:$("b_auditor").value.trim(),license:$("b_license").value.trim(),
+    firm:$("b_firm").value.trim(),place:$("b_place").value.trim(),hasPL:$("b_pl").checked,hasEQ:$("b_eq").checked,
+    prevMode:$("b_prevMode").value,prevOp:$("b_prevOp").value,
+    fd:+$("b_fd").value,fm:+$("b_fm").value,fy:+$("b_fy").value};
+  let lines=$("batchData").value.split(/\r?\n/).filter(l=>l.trim());
+  if(!lines.length){$("batchStatus").textContent="ยังไม่มีข้อมูล";return;}
+  const splitLine=l=>l.indexOf("\t")>=0?l.split("\t"):l.split(/\s*,\s*/);
+  // ตรวจหาแถวหัวตาราง
+  let map=null,startIdx=0;
+  for(let i=0;i<Math.min(lines.length,3);i++){
+    const cells=splitLine(lines[i]);
+    if(cells.some(c=>(c||"").indexOf("ชื่อบริษัท")>=0)||(cells.some(c=>(c||"").indexOf("รายการ")>=0)&&cells.some(c=>(c||"").indexOf("ผู้สอบ")>=0))){
+      map={name:findCol(cells,["ชื่อบริษัท","รายการ"]),fiscal:findCol(cells,["วันสิ้นสุดรอบบัญชี","วันสิ้นรอบบัญชี","สิ้นสุดรอบ","สิ้นรอบบัญชี"]),
+        report:findCol(cells,["วันที่หน้ารายงาน","หน้ารายงาน","วันที่รายงาน"]),prev:findCol(cells,["ปีก่อน"]),
+        op:findCol(cells,["รูปแบบหน้ารายงาน","ความเห็น"]),cf:findCol(cells,["กระแสเงินสด"])};
+      startIdx=i+1;break;
+    }
+  }
+  if(!map)map={name:0,fiscal:1,report:2,prev:3,op:4,cf:-1}; // ไม่มีหัว → ใช้ลำดับคอลัมน์มาตรฐาน
+  BATCH=[];let html="",okN=0,skipN=0,errN=0;
+  for(let i=startIdx;i<lines.length;i++){
+    const c=splitLine(lines[i]);const get=idx=>idx>=0&&idx<c.length?(c[idx]||"").trim():"";
+    const name=get(map.name);if(!name)continue;
+    const ei=entityInfo(name);
+    const opRaw=get(map.op);
+    const badOp = opRaw.indexOf("ไม่แสดงความเห็น")>=0 || (opRaw.indexOf("มีเงื่อนไข")>=0 && opRaw.indexOf("ไม่มีเงื่อนไข")<0);
+    if(!ei.ok){skipN++;html+='<div class="skiprow">⤴ ข้าม: '+name+' — ประเภท '+ei.kind+' (ต้องใช้เทมเพลตเฉพาะ)</div>';continue;}
+    if(badOp){skipN++;html+='<div class="skiprow">⤴ ข้าม: '+name+' — ความเห็น “'+opRaw+'” ต้องทำมือ</div>';continue;}
+    const rep=parseDate(get(map.report));
+    let fis=parseDate(get(map.fiscal));if(!fis)fis={text:fmt(cfg.fd,cfg.fm,cfg.fy),d:cfg.fd,m:cfg.fm,y:cfg.fy};
+    const prevStr=get(map.prev);let prev=prevStr?parseDate(prevStr):null;
+    let err=[];if(!rep)err.push("วันที่หน้ารายงานไม่ถูกต้อง/ว่าง");if(prevStr&&!prev)err.push("วันที่รายงานปีก่อนไม่ถูกต้อง");
+    if(err.length){errN++;html+='<div class="errrow">✗ '+name+': '+err.join(", ")+'</div>';continue;}
+    const o={company:name,term:ei.term,abbr:ei.abbr,sal:ei.sal,date:fis.text,std:cfg.std,hasPL:cfg.hasPL,hasEQ:cfg.hasEQ,
+      hasCF:/มี|yes|y|✓/i.test(get(map.cf)),eom:"",prevMode:prevStr?cfg.prevMode:"none",prevDate:fmt(fis.d,fis.m,fis.y-1),
+      prevOp:cfg.prevOp,prevRep:prev?prev.text:"",auditor:cfg.auditor,license:cfg.license,firm:cfg.firm,place:cfg.place,rdate:rep.text,year:fis.y};
+    BATCH.push(o);okN++;
+    html+='<div class="okrow">✓ '+BATCH.length+'. '+name+' <span style="color:#999">('+ei.kind+')</span> — งบ '+o.date+' · รายงาน '+o.rdate+(o.prevMode==="none"?' · ไม่มีวรรคเรื่องอื่น':'')+'</div>';
+  }
+  $("batchList").innerHTML=html||'<span style="color:#8a939c">ไม่พบข้อมูล</span>';
+  $("batchStatus").innerHTML="ออกได้ <b style='color:var(--ok)'>"+okN+"</b> ราย"+(skipN?" · ข้าม <b style='color:var(--warn)'>"+skipN+"</b>":"")+(errN?" · ผิดพลาด <b style='color:var(--err)'>"+errN+"</b>":"");
+  $("batchActs").style.display=BATCH.length?"flex":"none";
+  if(BATCH.length){$("bpaper").innerHTML=buildReportBody(BATCH[0]);$("bpvTitle").textContent="ตัวอย่างรายแรก: "+BATCH[0].company;}
+  else{$("bpaper").innerHTML='<p style="color:#8a939c">ไม่มีรายที่ออกได้</p>';}
+}
+function dlCombined(){if(!BATCH.length){alert("ยังไม่มีข้อมูล กด ตรวจข้อมูล ก่อน");return;}const body=BATCH.map(o=>buildReportBody(o)).join('<br clear=all style="page-break-before:always">');triggerDownload(new Blob(["﻿",wordHtml(body)],{type:"application/msword"}),"รายงานผู้สอบบัญชี (รวม "+BATCH.length+" ราย).doc");}
+
+// ---- minimal ZIP (store, UTF-8 names) ----
+let CRCT=null;
+function crcTable(){if(CRCT)return CRCT;CRCT=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?(0xEDB88320^(c>>>1)):(c>>>1);CRCT[n]=c>>>0;}return CRCT;}
+function crc32(u8){const t=crcTable();let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=(c>>>8)^t[(c^u8[i])&0xFF];return (c^0xFFFFFFFF)>>>0;}
+function zipStore(files){
+  const enc=new TextEncoder();const out=[],central=[];let offset=0;
+  const u16=n=>[n&255,(n>>>8)&255],u32=n=>[n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255];
+  const push=(a,b)=>{for(let i=0;i<b.length;i++)a.push(b[i]);};
+  files.forEach(f=>{
+    const nb=enc.encode(f.name),crc=crc32(f.data),sz=f.data.length;
+    const lh=[0x50,0x4b,0x03,0x04].concat(u16(20),u16(0x0800),u16(0),u16(0),u16(0),u32(crc),u32(sz),u32(sz),u16(nb.length),u16(0));
+    push(out,lh);push(out,nb);push(out,f.data);
+    const ch=[0x50,0x4b,0x01,0x02].concat(u16(20),u16(20),u16(0x0800),u16(0),u16(0),u16(0),u32(crc),u32(sz),u32(sz),u16(nb.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(offset));
+    push(central,ch);push(central,nb);offset+=lh.length+nb.length+sz;
+  });
+  const cStart=offset;push(out,central);
+  const eocd=[0x50,0x4b,0x05,0x06].concat(u16(0),u16(0),u16(files.length),u16(files.length),u32(central.length),u32(cStart),u16(0));
+  push(out,eocd);return new Uint8Array(out);
+}
+function dlZip(){
+  if(!BATCH.length){alert("ยังไม่มีข้อมูล กด ตรวจข้อมูล ก่อน");return;}
+  const enc=new TextEncoder();const used={};
+  const files=BATCH.map(o=>{let base="รายงานผู้สอบบัญชี "+shortName(o.company)+" "+o.year;used[base]=(used[base]||0)+1;if(used[base]>1)base+=" ("+used[base]+")";return {name:base+".doc",data:enc.encode("﻿"+wordHtml(buildReportBody(o)))};});
+  triggerDownload(new Blob([zipStore(files)],{type:"application/zip"}),"รายงานผู้สอบบัญชี ("+BATCH.length+" ราย).zip");
+}
+
+// ====== ดึงจาก Google Sheet (gviz, ไม่ต้องใช้ API key) ======
+function gvizCell(cell){
+  if(!cell) return "";
+  if(cell.f!=null && cell.f!=="") return cell.f;
+  let v=cell.v;
+  if(typeof v==="string" && v.indexOf("Date(")===0){const p=v.slice(5,-1).split(",").map(Number);return p[2]+"/"+(p[1]+1)+"/"+p[0];}
+  return v==null?"":String(v);
+}
+function gvizToTSV(text){
+  const s=text.indexOf('{'), e=text.lastIndexOf('}');
+  const j=JSON.parse(text.slice(s,e+1));
+  const cols=j.table.cols.map(c=>(c.label||"").trim());
+  const rows=j.table.rows.map(r=>(r.c||[]).map(gvizCell));
+  return cols.join('\t')+'\n'+rows.map(r=>r.join('\t')).join('\n');
+}
+function extractId(u){const m=(u||"").match(/\/d\/([a-zA-Z0-9_-]+)/);return m?m[1]:(u||"").trim();}
+function fetchSheet(){
+  const url=$("gsUrl").value.trim();if(!url){alert("วางลิงก์ชีต Feed ก่อน");return;}
+  const id=extractId(url);const sheet=$("gsSheet").value.trim();
+  let gid="";const gm=url.match(/[#&?]gid=(\d+)/);if(gm)gid=gm[1];
+  let g="https://docs.google.com/spreadsheets/d/"+id+"/gviz/tq?tqx=out:json&headers=1";
+  if(sheet)g+="&sheet="+encodeURIComponent(sheet);else if(gid)g+="&gid="+gid;
+  $("batchStatus").textContent="⏳ กำลังดึงข้อมูลจากชีต...";
+  fetch(g).then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.text();})
+    .then(t=>{$("batchData").value=gvizToTSV(t);parseBatch();})
+    .catch(e=>{$("batchStatus").innerHTML="<span style='color:var(--err)'>ดึงไม่สำเร็จ ("+e.message+") — ตรวจว่า (1) แชร์ชีตแบบ ‘ใครมีลิงก์ดูได้’ (2) เปิดเครื่องมือผ่านลิงก์ GitHub ไม่ใช่ไฟล์ในเครื่อง</span>";});
+}
+
+renderSingle();
+</script>
+</body>
+</html>
