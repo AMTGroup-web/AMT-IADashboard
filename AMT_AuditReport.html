@@ -109,6 +109,23 @@
       <option value="มาตรฐานการรายงานทางการเงิน">TFRS ฉบับเต็ม (PAEs)</option>
     </select>
 
+    <h2 class="sec">ประเภทความเห็น</h2>
+    <label>ประเภทความเห็น</label>
+    <select id="opinion">
+      <option value="unqualified" selected>ไม่มีเงื่อนไข (Unqualified)</option>
+      <option value="qualified">มีเงื่อนไข (Qualified)</option>
+    </select>
+    <div id="qBox" style="display:none">
+      <label>เนื้อหา “เกณฑ์ในการแสดงความเห็นอย่างมีเงื่อนไข”
+        <span class="hint">อธิบายเรื่องที่ทำให้มีเงื่อนไข (หัวข้อ + ประโยคปิดมาตรฐานขึ้นให้เอง)</span></label>
+      <textarea id="qBasis" rows="4" placeholder="เช่น ข้าพเจ้าไม่สามารถสังเกตการณ์การตรวจนับสินค้าคงเหลือ ณ วันที่ 31 ธันวาคม 2567 ซึ่งมีจำนวนเงิน ... เนื่องจาก ..."></textarea>
+    </div>
+    <div class="chk"><input type="checkbox" id="gcOn"><span>เพิ่มวรรคความไม่แน่นอนเรื่องการดำเนินงานต่อเนื่อง (Going Concern)</span></div>
+    <div id="gcBox" style="display:none">
+      <label>เนื้อหาวรรค Going Concern <span class="hint">(แก้ข้อความให้ตรงงานได้)</span></label>
+      <textarea id="gc" rows="5"></textarea>
+    </div>
+
     <h2 class="sec">วรรค “เรื่องอื่น” (งบปีก่อน)</h2>
     <label>สถานะการตรวจงบปีก่อน</label>
     <select id="prevMode">
@@ -137,9 +154,9 @@
       </div>
     </div>
 
-    <h2 class="sec">วรรคเพิ่มเติม (ถ้ามี)</h2>
-    <label>วรรคเน้นข้อมูล / going concern
-      <span class="hint">เว้นว่างถ้าไม่มี — พิมพ์เฉพาะเนื้อความ หัวข้อขึ้นให้เอง</span></label>
+    <h2 class="sec">วรรคเน้นข้อมูลและเหตุการณ์ (ถ้ามี)</h2>
+    <label>วรรคเน้นข้อมูลและเหตุการณ์ (Emphasis of Matter)
+      <span class="hint">เว้นว่างถ้าไม่มี — พิมพ์เฉพาะเนื้อความ หัวข้อขึ้นให้เอง (คนละส่วนกับ Going Concern ด้านบน)</span></label>
     <textarea id="eom" rows="3" placeholder="เช่น ข้าพเจ้าขอให้สังเกตหมายเหตุประกอบงบการเงินข้อ ..."></textarea>
 
     <h2 class="sec">ผู้ลงนาม / วันที่</h2>
@@ -310,11 +327,14 @@ function buildReportBody(o){
   let h="";
   h+='<h3>รายงานของผู้สอบบัญชีรับอนุญาต</h3>';
   h+='<p class="addr">เสนอ '+SAL+o.company+'</p>';
-  h+='<div class="sechead">ความเห็น</div>';
+  const qual=o.opinion==="qualified";
+  h+='<div class="sechead">'+(qual?'ความเห็นอย่างมีเงื่อนไข':'ความเห็น')+'</div>';
   h+='<p>ข้าพเจ้าได้ตรวจสอบงบการเงินของ'+o.company+' ('+AB+') ซึ่งประกอบด้วยงบแสดงฐานะการเงิน ณ วันที่ '+o.date+flTxt+' และหมายเหตุประกอบงบการเงิน รวมถึงสรุปนโยบายการบัญชีที่สำคัญ</p>';
-  h+='<p>ข้าพเจ้าเห็นว่า งบการเงินข้างต้นนี้แสดงฐานะการเงินของ'+o.company+' ณ วันที่ '+o.date+' ผลการดำเนินงาน'+cf+' สำหรับปีสิ้นสุดวันเดียวกัน โดยถูกต้องตามที่ควรในสาระสำคัญตาม'+o.std+'</p>';
-  h+='<div class="sechead">เกณฑ์ในการแสดงความเห็น</div>';
-  h+='<p>ข้าพเจ้าได้ปฏิบัติงานตรวจสอบตามมาตรฐานการสอบบัญชี ความรับผิดชอบของข้าพเจ้าได้กล่าวไว้ในวรรคความรับผิดชอบของผู้สอบบัญชีต่อการตรวจสอบงบการเงินในรายงานของข้าพเจ้า ข้าพเจ้ามีความเป็นอิสระจาก'+T+'ตามประมวลจรรยาบรรณของผู้ประกอบวิชาชีพบัญชี รวมถึงมาตรฐานเรื่องความเป็นอิสระที่กำหนดโดยสภาวิชาชีพบัญชี (ประมวลจรรยาบรรณของผู้ประกอบวิชาชีพบัญชี) ในส่วนที่เกี่ยวข้องกับการตรวจสอบงบการเงิน และข้าพเจ้าได้ปฏิบัติตามความรับผิดชอบด้านจรรยาบรรณอื่น ๆ ตามประมวลจรรยาบรรณของผู้ประกอบวิชาชีพบัญชี ข้าพเจ้าเชื่อว่าหลักฐานการสอบบัญชีที่ข้าพเจ้าได้รับเพียงพอและเหมาะสมเพื่อใช้เป็นเกณฑ์ในการแสดงความเห็นของข้าพเจ้า</p>';
+  h+='<p>ข้าพเจ้าเห็นว่า '+(qual?'ยกเว้นผลกระทบของเรื่องที่กล่าวไว้ในวรรคเกณฑ์ในการแสดงความเห็นอย่างมีเงื่อนไข ':'')+'งบการเงินข้างต้นนี้แสดงฐานะการเงินของ'+o.company+' ณ วันที่ '+o.date+' ผลการดำเนินงาน'+cf+' สำหรับปีสิ้นสุดวันเดียวกัน โดยถูกต้องตามที่ควรในสาระสำคัญตาม'+o.std+'</p>';
+  h+='<div class="sechead">'+(qual?'เกณฑ์ในการแสดงความเห็นอย่างมีเงื่อนไข':'เกณฑ์ในการแสดงความเห็น')+'</div>';
+  if(qual && o.qBasis){h+='<p>'+o.qBasis.replace(/\n+/g,"</p><p>")+'</p>';}
+  h+='<p>ข้าพเจ้าได้ปฏิบัติงานตรวจสอบตามมาตรฐานการสอบบัญชี ความรับผิดชอบของข้าพเจ้าได้กล่าวไว้ในวรรคความรับผิดชอบของผู้สอบบัญชีต่อการตรวจสอบงบการเงินในรายงานของข้าพเจ้า ข้าพเจ้ามีความเป็นอิสระจาก'+T+'ตามประมวลจรรยาบรรณของผู้ประกอบวิชาชีพบัญชี รวมถึงมาตรฐานเรื่องความเป็นอิสระที่กำหนดโดยสภาวิชาชีพบัญชี (ประมวลจรรยาบรรณของผู้ประกอบวิชาชีพบัญชี) ในส่วนที่เกี่ยวข้องกับการตรวจสอบงบการเงิน และข้าพเจ้าได้ปฏิบัติตามความรับผิดชอบด้านจรรยาบรรณอื่น ๆ ตามประมวลจรรยาบรรณของผู้ประกอบวิชาชีพบัญชี ข้าพเจ้าเชื่อว่าหลักฐานการสอบบัญชีที่ข้าพเจ้าได้รับเพียงพอและเหมาะสมเพื่อใช้เป็นเกณฑ์ในการแสดงความเห็น'+(qual?'อย่างมีเงื่อนไข':'')+'ของข้าพเจ้า</p>';
+  if(o.gc){h+='<div class="sechead">ความไม่แน่นอนที่มีสาระสำคัญที่เกี่ยวข้องกับการดำเนินงานต่อเนื่อง</div>';h+='<p>'+o.gc.replace(/\n+/g,"</p><p>")+'</p>';}
   if(o.eom){h+='<div class="sechead">ข้อมูลและเหตุการณ์ที่เน้น</div>';h+='<p>'+o.eom.replace(/\n+/g,"</p><p>")+'</p>';}
   if(o.prevMode!=="none"){
     h+='<div class="sechead">เรื่องอื่น</div>';
@@ -364,16 +384,19 @@ function gatherSingle(){
   const ent=$("ent").value;
   const ei=ent==="ห้าง"?{term:"ห้าง",abbr:"ห้าง",sal:"ผู้เป็นหุ้นส่วนของ"}:{term:"บริษัท",abbr:"บริษัท",sal:"ผู้ถือหุ้นของ"};
   return {company:$("company").value.trim(),term:ei.term,abbr:ei.abbr,sal:ei.sal,date:d3("d","m","y"),std:$("std").value,
+    opinion:$("opinion").value,qBasis:$("qBasis").value.trim(),gc:$("gcOn").checked?$("gc").value.trim():"",
     hasPL:$("s_pl").checked,hasEQ:$("s_eq").checked,hasCF:$("s_cf").checked,eom:$("eom").value.trim(),
     prevMode:$("prevMode").value,prevDate:d3("pd","pm","py"),prevOp:$("prevOp").value,prevRep:d3("prd","prm","pry"),
     auditor:$("auditor").value.trim(),license:$("license").value.trim(),firm:$("firm").value.trim(),
     place:$("place").value.trim(),rdate:d3("rd","rm","ry"),year:$("y").value};
 }
-function renderSingle(){const o=gatherSingle();$("paper").innerHTML=buildReportBody(o);$("fname").textContent="รายงานผู้สอบบัญชี "+shortName(o.company)+" "+o.year+".doc";$("prevBox").style.display=$("prevMode").value==="none"?"none":"block";}
+const GC_TMPL="ข้าพเจ้าขอให้สังเกตหมายเหตุประกอบงบการเงินข้อ ... ซึ่งอธิบายถึงเหตุการณ์หรือสถานการณ์ที่แสดงให้เห็นว่ามีความไม่แน่นอนที่มีสาระสำคัญ ซึ่งอาจเป็นเหตุให้เกิดข้อสงสัยอย่างมีนัยสำคัญเกี่ยวกับความสามารถในการดำเนินงานต่อเนื่องของกิจการ อย่างไรก็ตาม ความเห็นของข้าพเจ้าต่อเรื่องนี้ไม่ได้เปลี่ยนแปลงไป";
+function renderSingle(){const o=gatherSingle();$("paper").innerHTML=buildReportBody(o);$("fname").textContent="รายงานผู้สอบบัญชี "+shortName(o.company)+" "+o.year+".doc";$("prevBox").style.display=$("prevMode").value==="none"?"none":"block";$("qBox").style.display=$("opinion").value==="qualified"?"block":"none";$("gcBox").style.display=$("gcOn").checked?"block":"none";}
+$("gcOn").addEventListener("change",()=>{if($("gcOn").checked && !$("gc").value.trim()){$("gc").value=GC_TMPL;renderSingle();}});
 function dlSingle(){const o=gatherSingle();triggerDownload(new Blob(["﻿",wordHtml(buildReportBody(o))],{type:"application/msword"}),"รายงานผู้สอบบัญชี "+shortName(o.company)+" "+o.year+".doc");}
 $("y").addEventListener("input",()=>{$("py").value=(+$("y").value)-1;$("pry").value=(+$("y").value);renderSingle();});
 
-const FIELDS=["company","ent","d","m","y","s_pl","s_eq","s_cf","std","prevMode","pd","pm","py","prevOp","prd","prm","pry","eom","auditor","license","firm","place","rd","rm","ry"];
+const FIELDS=["company","ent","d","m","y","s_pl","s_eq","s_cf","std","opinion","qBasis","gcOn","gc","prevMode","pd","pm","py","prevOp","prd","prm","pry","eom","auditor","license","firm","place","rd","rm","ry"];
 function saveLocal(){const o={};FIELDS.forEach(f=>{const el=$(f);o[f]=el.type==="checkbox"?el.checked:el.value;});try{localStorage.setItem("amt_auditreport",JSON.stringify(o));alert("บันทึกค่าเรียบร้อย ✓");}catch(e){alert("บันทึกไม่ได้ในหน้านี้ ใช้ปุ่มดาวน์โหลด Word แทนได้เลย");}}
 function loadLocal(){let s=null;try{s=localStorage.getItem("amt_auditreport");}catch(e){}if(!s){alert("ยังไม่มีค่าที่บันทึกไว้");return;}const o=JSON.parse(s);FIELDS.forEach(f=>{if(o[f]===undefined)return;const el=$(f);if(el.type==="checkbox")el.checked=o[f];else el.value=o[f];});renderSingle();}
 document.querySelectorAll("#view1 input,#view1 select,#view1 textarea").forEach(el=>{el.addEventListener("input",renderSingle);el.addEventListener("change",renderSingle);});
