@@ -392,7 +392,9 @@ function gatherSingle(){
 }
 const GC_TMPL="ข้าพเจ้าขอให้สังเกตหมายเหตุประกอบงบการเงินข้อ ... ซึ่งอธิบายถึงเหตุการณ์หรือสถานการณ์ที่แสดงให้เห็นว่ามีความไม่แน่นอนที่มีสาระสำคัญ ซึ่งอาจเป็นเหตุให้เกิดข้อสงสัยอย่างมีนัยสำคัญเกี่ยวกับความสามารถในการดำเนินงานต่อเนื่องของกิจการ อย่างไรก็ตาม ความเห็นของข้าพเจ้าต่อเรื่องนี้ไม่ได้เปลี่ยนแปลงไป";
 function renderSingle(){const o=gatherSingle();$("paper").innerHTML=buildReportBody(o);$("fname").textContent="รายงานผู้สอบบัญชี "+shortName(o.company)+" "+o.year+".doc";$("prevBox").style.display=$("prevMode").value==="none"?"none":"block";$("qBox").style.display=$("opinion").value==="qualified"?"block":"none";$("gcBox").style.display=$("gcOn").checked?"block":"none";}
-$("gcOn").addEventListener("change",()=>{if($("gcOn").checked && !$("gc").value.trim()){$("gc").value=GC_TMPL;renderSingle();}});
+$("gcOn").addEventListener("change",()=>{if($("gcOn").checked && !$("gc").value.trim()){$("gc").value=GC_TMPL;}renderSingle();});
+const Q_TMPL="ณ วันที่ [วันสิ้นรอบบัญชี] บริษัทมีสินค้าคงเหลือแสดงในงบแสดงฐานะการเงินจำนวน ......... บาท ข้าพเจ้าไม่ได้เข้าสังเกตการณ์การตรวจนับสินค้าคงเหลือดังกล่าว และไม่สามารถใช้วิธีการตรวจสอบอื่นให้เป็นที่พอใจในปริมาณและมูลค่าของสินค้าคงเหลือได้ ดังนั้น ข้าพเจ้าจึงไม่สามารถสรุปได้ว่าจำเป็นต้องปรับปรุงรายการเกี่ยวกับสินค้าคงเหลือหรือไม่";
+$("opinion").addEventListener("change",()=>{if($("opinion").value==="qualified" && !$("qBasis").value.trim()){$("qBasis").value=Q_TMPL;}renderSingle();});
 function dlSingle(){const o=gatherSingle();triggerDownload(new Blob(["﻿",wordHtml(buildReportBody(o))],{type:"application/msword"}),"รายงานผู้สอบบัญชี "+shortName(o.company)+" "+o.year+".doc");}
 $("y").addEventListener("input",()=>{$("py").value=(+$("y").value)-1;$("pry").value=(+$("y").value);renderSingle();});
 
