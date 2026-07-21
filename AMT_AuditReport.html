@@ -360,11 +360,11 @@ function buildReportBody(o){
   h+='<li>ประเมินการนำเสนอ โครงสร้างและเนื้อหาของงบการเงินโดยรวม รวมถึงการเปิดเผยข้อมูลว่างบการเงินแสดงรายการและเหตุการณ์ในรูปแบบที่ทำให้มีการนำเสนอข้อมูลโดยถูกต้องตามที่ควรหรือไม่</li>';
   h+='</ul>';
   h+='<p>ข้าพเจ้าได้สื่อสารกับผู้บริหารในเรื่องต่าง ๆ ที่สำคัญ ซึ่งรวมถึงขอบเขตและช่วงเวลาของการตรวจสอบตามที่ได้วางแผนไว้ ประเด็นที่มีนัยสำคัญที่พบจากการตรวจสอบ รวมถึงข้อบกพร่องที่มีนัยสำคัญในระบบการควบคุมภายในหากข้าพเจ้าได้พบในระหว่างการตรวจสอบของข้าพเจ้า</p>';
-  h+='<div class="sign"><div class="c"><p style="margin:0">&nbsp;</p><p style="margin:0">&nbsp;</p><p style="margin:0">&nbsp;</p><p style="margin:0">&nbsp;</p><p style="margin:0">&nbsp;</p>';
-  h+='<p style="text-align:center;margin:2px 0">('+o.auditor+')</p>';
+  h+='<div class="sign"><div class="c">';
+  h+='<p style="text-align:center;margin:80pt 0 2px 0">('+o.auditor+')</p>';
   h+='<p style="text-align:center;margin:2px 0">ผู้สอบบัญชีรับอนุญาต เลขที่ '+o.license+'</p>';
   h+='<p style="text-align:center;margin:2px 0">'+o.firm+'</p></div>';
-  h+='<p style="margin:14px 0 0">'+(o.place?o.place+"<br>":"")+'วันที่ '+o.rdate+'</p></div>';
+  h+='<p style="margin:14px 0 0;text-align:left">'+(o.place?o.place+"<br>":"")+'วันที่ '+o.rdate+'</p></div>';
   return h;
 }
 
@@ -376,7 +376,7 @@ function wordHtml(body,hf){
   "<style>@page Section1{size:21.0cm 29.7cm;margin:2.6cm 1.96cm 2.75cm 3.05cm;mso-page-orientation:portrait;"+(hf?"mso-header-margin:1.0cm;mso-footer-margin:1.0cm;mso-header:h1;mso-footer:f1;":"")+"}div.Section1{page:Section1}"+
   "body{font-family:'Angsana New','Cordia New','TH Sarabun New';font-size:16pt;line-height:1.0;color:#000}"+
   "h3{font-size:16pt;text-align:center;font-weight:bold;margin:0 0 6pt;line-height:1.0}"+
-  ".sechead{font-weight:bold;font-size:16pt;margin:10pt 0 2pt;line-height:1.0}.addr{font-weight:bold;margin:8pt 0 2pt;line-height:1.0}"+
+  ".sechead{font-weight:bold;font-size:16pt;margin:10pt 0 2pt;line-height:1.0;page-break-after:avoid;mso-pagination:keep-with-next}.addr{font-weight:bold;margin:8pt 0 2pt;line-height:1.0}"+
   "p{font-size:16pt;margin:6pt 0;text-align:justify;text-justify:inter-cluster;line-height:1.0}li{font-size:16pt;margin:4pt 0;text-align:justify;text-justify:inter-cluster;line-height:1.0}ul{margin:6pt 0}"+
   ".dotline{border-bottom:1px dotted #000;width:60%;margin:24pt auto 4pt}.sign .c{width:60%;margin-left:auto}"+
   "</style></head><body><div class=Section1>"+body+(hf?LH_HF:"")+"</div></body></html>";
