@@ -544,7 +544,7 @@ var DX_W='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 var DX_R='xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
 var DX_DRAW='xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
 function dxEsc(t){return (t==null?"":String(t)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
-function dxRun(text,o){o=o||{};var f=o.font||"Angsana New";var r='<w:rPr><w:rFonts w:ascii="'+f+'" w:hAnsi="'+f+'" w:cs="'+f+'"/>';if(o.bold)r+='<w:b/><w:bCs/>';if(o.italic)r+='<w:i/><w:iCs/>';if(o.color)r+='<w:color w:val="'+o.color+'"/>';var sz=o.sz||32;r+='<w:sz w:val="'+sz+'"/><w:szCs w:val="'+sz+'"/><w:cs/></w:rPr>';return '<w:r>'+r+'<w:t xml:space="preserve">'+dxEsc(text)+'</w:t></w:r>';}
+function dxRun(text,o){o=o||{};var f=o.font||"Angsana New";var r='<w:rPr><w:rFonts w:ascii="'+f+'" w:hAnsi="'+f+'" w:cs="'+f+'"/>';if(o.bold)r+='<w:b/><w:bCs/>';if(o.italic)r+='<w:i/><w:iCs/>';if(o.color)r+='<w:color w:val="'+o.color+'"/>';var sz=o.sz||32;r+='<w:sz w:val="'+sz+'"/><w:szCs w:val="'+sz+'"/>'+(o.u?'<w:u w:val="single"/>':'')+'<w:cs/></w:rPr>';return '<w:r>'+r+'<w:t xml:space="preserve">'+dxEsc(text)+'</w:t></w:r>';}
 function dxPara(content,o){o=o||{};var jc=o.jc||"thaiDistribute";var before=o.before||0;var p='<w:pPr><w:spacing w:before="'+before+'" w:after="0" w:line="240" w:lineRule="auto"/>';if(o.keep)p+='<w:keepNext/>';if(o.ind)p+='<w:ind w:left="'+o.ind+'" w:hanging="'+(o.hang||0)+'"/>';p+='<w:jc w:val="'+jc+'"/></w:pPr>';var body=(typeof content==="string")?(content?dxRun(content,o):""):content.join("");return '<w:p>'+p+body+'</w:p>';}
 function dxParaBr(text,o){var parts=String(text).split("\n");var runs=[];for(var k=0;k<parts.length;k++){runs.push(dxRun(parts[k],o));if(k<parts.length-1)runs.push('<w:r><w:br/></w:r>');}return dxPara(runs,o);}
 function dxBullet(text){return '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:left="454" w:hanging="454"/><w:jc w:val="thaiDistribute"/></w:pPr>'+dxRun("•",{})+'<w:r><w:tab/></w:r>'+dxRun(text,{})+'</w:p>';}
@@ -558,9 +558,9 @@ function dxBodyFromHtml(html){
   var re=/<h3>([\s\S]*?)<\/h3>|<div class="sechead">([\s\S]*?)<\/div>|<p class="addr">([\s\S]*?)<\/p>|<ul>([\s\S]*?)<\/ul>|<div class="sign">([\s\S]*)<\/div>\s*$|<p([^>]*)>([\s\S]*?)<\/p>/g;
   var m;
   while((m=re.exec(html))!==null){
-    if(m[1]!==undefined){ out+=dxPara(txt(m[1]),{jc:"center",bold:true,before:0}); }
-    else if(m[2]!==undefined){ out+=dxPara(txt(m[2]),{jc:"left",bold:true,keep:true,before:220}); }
-    else if(m[3]!==undefined){ out+=dxPara(txt(m[3]),{jc:"left",bold:true,before:160}); }
+    if(m[1]!==undefined){ out+=dxPara(txt(m[1]),{jc:"center",bold:true,u:true,before:0}); }
+    else if(m[2]!==undefined){ out+=dxPara(txt(m[2]),{jc:"left",bold:true,u:true,keep:true,before:220}); }
+    else if(m[3]!==undefined){ out+=dxPara(txt(m[3]),{jc:"left",before:160}); }
     else if(m[4]!==undefined){ var lis=m[4].match(/<li>([\s\S]*?)<\/li>/g)||[]; for(var j=0;j<lis.length;j++){ out+=dxBullet(txt(lis[j].replace(/<\/?li>/g,""))); } }
     else if(m[5]!==undefined){
       var ps=m[5].match(/<p([^>]*)>([\s\S]*?)<\/p>/g)||[];
@@ -584,7 +584,7 @@ function dxHeaderXml(){
 function dxFooterXml(){
   var a1='Address: 79/109 M.2 Soi Ladkrabang 54 Sisa Chorakhe Noi, Bang Sao Thong, Samutprakan 10570. Website: www.amtaudit.com';
   var a2='Email: info@amtaudit.com    Office: 02-821-6928';
-  return DX_XMLDECL+'<w:ftr '+DX_W+' '+DX_R+' '+DX_DRAW+'>'+dxBar([["215E99",1089],[null,90],["FF6E00",7887]])+dxPara(a1,{jc:"center",sz:18,color:"215E99",italic:true,before:60,font:"Arial"})+dxPara(a2,{jc:"center",sz:18,color:"215E99",italic:true,font:"Arial"})+'</w:ftr>';
+  return DX_XMLDECL+'<w:ftr '+DX_W+' '+DX_R+' '+DX_DRAW+'>'+dxBar([["215E99",1089],[null,90],["FF6E00",7887]])+dxPara(a1,{jc:"left",sz:18,color:"215E99",italic:true,before:60,font:"Arial"})+dxPara(a2,{jc:"left",sz:18,color:"215E99",italic:true,font:"Arial"})+'</w:ftr>';
 }
 function dxB64ToBytes(b64){var bin=atob(b64);var u8=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);return u8;}
 
@@ -592,7 +592,7 @@ function buildDocx(o,hf){
   var enc=new TextEncoder();
   var stylesXml=DX_XMLDECL+'<w:styles '+DX_W+'><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Angsana New" w:eastAsia="Times New Roman" w:hAnsi="Angsana New" w:cs="Angsana New"/><w:sz w:val="32"/><w:szCs w:val="32"/><w:lang w:val="en-US" w:eastAsia="en-US" w:bidi="th-TH"/></w:rPr></w:rPrDefault><w:pPrDefault/></w:docDefaults></w:styles>';
   var settingsXml=DX_XMLDECL+'<w:settings '+DX_W+'><w:zoom w:percent="100"/><w:defaultTabStop w:val="720"/><w:noPunctuationKerning/><w:characterSpacingControl w:val="doNotCompress"/><w:compat><w:applyBreakingRules/></w:compat></w:settings>';
-  var sect='<w:sectPr>'+(hf?'<w:headerReference w:type="default" r:id="rId1"/><w:footerReference w:type="default" r:id="rId2"/>':'')+'<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1474" w:right="1111" w:bottom="1559" w:left="1729" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr>';
+  var sect='<w:sectPr>'+(hf?'<w:headerReference w:type="default" r:id="rId1"/><w:footerReference w:type="default" r:id="rId2"/>':'')+'<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1338" w:right="850" w:bottom="28" w:left="1140" w:header="142" w:footer="0" w:gutter="0"/></w:sectPr>';
   var docXml=DX_XMLDECL+'<w:document '+DX_W+' '+DX_R+'><w:body>'+dxBodyFromHtml(buildReportBody(o))+sect+'</w:body></w:document>';
   var ct=DX_XMLDECL+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>'+(hf?'<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>':'')+'</Types>';
   var rels=DX_XMLDECL+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';
