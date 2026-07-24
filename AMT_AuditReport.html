@@ -277,8 +277,8 @@
     <div id="batchStatus" class="statusbar"></div>
     <div id="batchList"></div>
     <div class="actbtns" id="batchActs" style="display:none">
-      <button class="primary" onclick="dlZip()">⬇️ ดาวน์โหลดแยกไฟล์ (.zip)</button>
-      <button class="primary" onclick="dlCombined()">⬇️ รวมเป็นไฟล์เดียว (.doc)</button>
+      <button class="primary" onclick="dlZip()">⬇️ แยกไฟล์ (.zip ของ .docx)</button>
+      <button class="primary" onclick="dlCombined()">⬇️ รวมเป็นไฟล์เดียว (.docx)</button>
     </div>
   </div>
 
@@ -482,7 +482,7 @@ function parseBatch(){
   if(BATCH.length){$("bpaper").innerHTML=buildReportBody(BATCH[0]);$("bpvTitle").textContent="ตัวอย่างรายแรก: "+BATCH[0].company;}
   else{$("bpaper").innerHTML='<p style="color:#8a939c">ไม่มีรายที่ออกได้</p>';}
 }
-function dlCombined(){if(!BATCH.length){alert("ยังไม่มีข้อมูล กด ตรวจข้อมูล ก่อน");return;}const body=BATCH.map(o=>buildReportBody(o)).join('<br clear=all style="page-break-before:always">');triggerDownload(new Blob(["﻿",wordHtml(body,true)],{type:"application/msword"}),"รายงานผู้สอบบัญชี (รวม "+BATCH.length+" ราย).doc");}
+function dlCombined(){if(!BATCH.length){alert("ยังไม่มีข้อมูล กด ตรวจข้อมูล ก่อน");return;}var pb='<w:p><w:r><w:br w:type="page"/></w:r></w:p>';var multi=BATCH.map(function(o){return dxBodyFromHtml(buildReportBody(o));}).join(pb);triggerDownload(new Blob([buildDocx(multi,true)],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}),"รายงานผู้สอบบัญชี (รวม "+BATCH.length+" ราย).docx");}
 
 // ---- minimal ZIP (store, UTF-8 names) ----
 let CRCT=null;
@@ -506,7 +506,7 @@ function zipStore(files){
 function dlZip(){
   if(!BATCH.length){alert("ยังไม่มีข้อมูล กด ตรวจข้อมูล ก่อน");return;}
   const enc=new TextEncoder();const used={};
-  const files=BATCH.map(o=>{let base="รายงานผู้สอบบัญชี "+shortName(o.company)+" "+o.year;used[base]=(used[base]||0)+1;if(used[base]>1)base+=" ("+used[base]+")";return {name:base+".doc",data:enc.encode("﻿"+wordHtml(buildReportBody(o),true))};});
+  const files=BATCH.map(o=>{let base="รายงานผู้สอบบัญชี "+shortName(o.company)+" "+o.year;used[base]=(used[base]||0)+1;if(used[base]>1)base+=" ("+used[base]+")";return {name:base+".docx",data:buildDocx(o,true)};});
   triggerDownload(new Blob([zipStore(files)],{type:"application/zip"}),"รายงานผู้สอบบัญชี ("+BATCH.length+" ราย).zip");
 }
 
@@ -593,7 +593,8 @@ function buildDocx(o,hf){
   var stylesXml=DX_XMLDECL+'<w:styles '+DX_W+'><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Angsana New" w:eastAsia="Times New Roman" w:hAnsi="Angsana New" w:cs="Angsana New"/><w:sz w:val="32"/><w:szCs w:val="32"/><w:lang w:val="en-US" w:eastAsia="en-US" w:bidi="th-TH"/></w:rPr></w:rPrDefault><w:pPrDefault/></w:docDefaults></w:styles>';
   var settingsXml=DX_XMLDECL+'<w:settings '+DX_W+'><w:zoom w:percent="100"/><w:defaultTabStop w:val="720"/><w:noPunctuationKerning/><w:characterSpacingControl w:val="doNotCompress"/><w:compat><w:applyBreakingRules/></w:compat></w:settings>';
   var sect='<w:sectPr>'+(hf?'<w:headerReference w:type="default" r:id="rId1"/><w:footerReference w:type="default" r:id="rId2"/>':'')+'<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1338" w:right="850" w:bottom="28" w:left="1140" w:header="142" w:footer="0" w:gutter="0"/></w:sectPr>';
-  var docXml=DX_XMLDECL+'<w:document '+DX_W+' '+DX_R+'><w:body>'+dxBodyFromHtml(buildReportBody(o))+sect+'</w:body></w:document>';
+  var bodyXml=(typeof o==="string")?o:dxBodyFromHtml(buildReportBody(o));
+  var docXml=DX_XMLDECL+'<w:document '+DX_W+' '+DX_R+'><w:body>'+bodyXml+sect+'</w:body></w:document>';
   var ct=DX_XMLDECL+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>'+(hf?'<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>':'')+'</Types>';
   var rels=DX_XMLDECL+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';
   var docRels=DX_XMLDECL+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>'+(hf?'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>':'')+'</Relationships>';
